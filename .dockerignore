@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.npm-cache
+.tmp
+.localappdata
+media
+coverage

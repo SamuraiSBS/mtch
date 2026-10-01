@@ -1,0 +1,17 @@
+import { z } from "zod";
+import { fail } from "./http";
+
+const optionalUrl = z.union([z.url().max(500), z.literal(""), z.null()]).optional().transform(v => v || null);
+const optionalText = (max: number) => z.union([z.string().max(max), z.null()]).optional().transform(v => v || null);
+export const salary = { salaryMinRub: z.number().int().positive(), salaryMaxRub: z.number().int().positive() };
+const salaryCheck = (x: { salaryMinRub: number; salaryMaxRub: number }) => x.salaryMinRub <= x.salaryMaxRub;
+export const specialistInput = z.object({
+  firstName: z.string().trim().min(1).max(100), lastName: z.string().trim().min(1).max(100), birthDate: z.iso.date().nullable().optional(), cityId: z.uuid().nullable().optional(), avatarFileId: z.uuid(), professionId: z.uuid(),
+  experience: z.enum(["NONE", "UNDER_1", "FROM_1_TO_3", "FROM_3_TO_5", "OVER_5"]).nullable().optional(), level: z.enum(["INTERN", "JUNIOR", "MIDDLE", "SENIOR"]).nullable().optional(), cooperationType: z.enum(["STAFF", "PROJECT", "FREELANCE", "INTERNSHIP"]).nullable().optional(),
+  skillIds: z.array(z.uuid()).min(1), about: optionalText(500), portfolioUrl: optionalUrl, githubUrl: optionalUrl, behanceGitlabUrl: optionalUrl, telegram: optionalText(100),
+  ...salary, workFormat: z.enum(["REMOTE", "HYBRID", "OFFICE"]).nullable().optional(), employmentType: z.enum(["FULL_TIME", "PART_TIME", "PROJECT", "INTERNSHIP"]).nullable().optional(), searchStatus: z.enum(["ACTIVE", "OPEN_TO_OFFERS", "NOT_LOOKING"]).default("OPEN_TO_OFFERS"),
+}).refine(salaryCheck, { path: ["salaryMaxRub"], message: "Максимальная зарплата ниже минимальной" });
+export const companyInput = z.object({ name: z.string().trim().min(1).max(160), description: z.string().trim().min(1).max(500), workFormat: z.enum(["REMOTE", "HYBRID", "OFFICE"]), foundedYear: z.number().int().min(1800).max(new Date().getFullYear()), sizeBand: z.enum(["1-10", "11-50", "51-200", "201-1000", "1000+"]), industry: z.string().trim().min(1).max(120), websiteUrl: optionalUrl, logoFileId: z.uuid(), contactEmail: z.union([z.email(), z.literal(""), z.null()]).optional().transform(v => v || null), telegram: optionalText(100), phone: optionalText(50) });
+export const searchInput = z.object({ title: z.string().trim().min(1).max(160), professionId: z.uuid(), targetLevel: z.enum(["INTERN", "JUNIOR", "MIDDLE", "SENIOR"]), minimumExperience: z.enum(["NONE", "UNDER_1", "FROM_1_TO_3", "FROM_3_TO_5", "OVER_5"]), skillIds: z.array(z.uuid()).min(1), ...salary, workFormat: z.enum(["REMOTE", "HYBRID", "OFFICE"]), employmentType: z.enum(["FULL_TIME", "PART_TIME", "PROJECT", "INTERNSHIP"]) }).refine(salaryCheck, { path: ["salaryMaxRub"], message: "Максимальная зарплата ниже минимальной" });
+export const offerInput = z.object({ specialistUserId: z.string().uuid(), searchProfileId: z.uuid(), positionTitle: z.string().trim().min(1).max(160), ...salary, description: z.string().trim().min(1).max(5000), workFormat: z.enum(["REMOTE", "HYBRID", "OFFICE"]), employmentType: z.enum(["FULL_TIME", "PART_TIME", "PROJECT", "INTERNSHIP"]), message: z.string().trim().min(1).max(3000) }).refine(salaryCheck, { path: ["salaryMaxRub"], message: "Максимальная зарплата ниже минимальной" });
+export function parse<T extends z.ZodType>(schema: T, input: unknown): z.output<T> { const result = schema.safeParse(input); if (!result.success) return fail(422, "VALIDATION_ERROR", "Проверьте поля формы", result.error.flatten()); return result.data; }

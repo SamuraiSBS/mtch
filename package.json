@@ -1,0 +1,43 @@
+{
+  "name": "mtch-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "smoke": "node --import tsx scripts/smoke.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
+    "db:seed": "node --env-file-if-exists=.env --import tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.6",
+    "better-auth": "1.7.6",
+    "drizzle-orm": "0.45.2",
+    "next": "16.3.5",
+    "pg": "8.16.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "24.6.2",
+    "@types/pg": "8.15.5",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "drizzle-kit": "0.31.10",
+    "eslint": "9.36.0",
+    "eslint-config-next": "16.3.5",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "4.1.6"
+  },
+  "optionalDependencies": {
+    "@next/swc-linux-x64-musl": "^16.3.5",
+    "@next/swc-win32-x64-msvc": "^16.3.5"
+  }
+}

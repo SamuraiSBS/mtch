@@ -1,0 +1,1 @@
+export default function Home() { return <section className="hero"><p>Платформа обратного найма</p><h1>Работодатель находит специалиста первым.</h1><p>Создайте профиль, найдите подходящего человека и отправьте предложение.</p><div className="actions"><a className="button" href="/register">Начать</a><a className="button secondary" href="/login">Войти</a></div></section>; }
