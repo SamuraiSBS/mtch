@@ -1,6 +1,6 @@
 import "./style.css";
-import Link from "next/link";
 import { Onest } from "next/font/google";
+import { SiteHeader } from "@/components/site-header";
 
 const onest = Onest({
   subsets: ["cyrillic", "latin"],
@@ -10,4 +10,4 @@ const onest = Onest({
 });
 
 export const metadata = { title: "mtch.", description: "Обратный найм для ИТ" };
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="ru" className={onest.variable}><body><header><Link href="/">mtch.</Link><nav><Link href="/login">Вход</Link><Link href="/register">Регистрация</Link></nav></header><main>{children}</main></body></html>; }
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="ru" className={onest.variable}><body><SiteHeader /><main>{children}</main></body></html>; }
