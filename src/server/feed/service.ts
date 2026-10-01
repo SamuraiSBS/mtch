@@ -37,7 +37,7 @@ export async function candidateFeed(ownerUserId: string, url: string) {
   });
   const scored = filtered.map(candidate => {
     const score = deterministicScorer.score({ ...search, skillIds: search.skillIds }, { ...candidate, skillIds: candidate.skills.map(x => x.id) } as CandidateCriteria);
-    return { userId: candidate.userId, avatarUrl: candidate.avatarUrl, firstName: candidate.firstName, lastName: candidate.lastName, profession: candidate.profession, level: candidate.level, experience: candidate.experience, skills: candidate.skills.slice(0, 6), salaryMinRub: candidate.salaryMinRub, salaryMaxRub: candidate.salaryMaxRub, matchPercent: score };
+    return { userId: candidate.userId, avatarUrl: `${candidate.avatarUrl}?size=256`, firstName: candidate.firstName, lastName: candidate.lastName, profession: candidate.profession, level: candidate.level, experience: candidate.experience, skills: candidate.skills.slice(0, 6), salaryMinRub: candidate.salaryMinRub, salaryMaxRub: candidate.salaryMaxRub, matchPercent: score };
   }).sort((a, b) => b.matchPercent - a.matchPercent || a.userId.localeCompare(b.userId));
   return paged(scored, page, pageSize);
 }

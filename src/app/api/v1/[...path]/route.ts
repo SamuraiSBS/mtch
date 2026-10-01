@@ -6,7 +6,7 @@ import { addCompanyPhoto, addSocialLink, companyDetail, ownCompany, removeCompan
 import { listSearchProfiles, removeSearchProfile, saveSearchProfile, searchDetail } from "@/server/search-profiles/service";
 import { candidateFeed } from "@/server/feed/service";
 import { createOffer, listOffers, offerDetail, transitionOffer, listMatches, matchDetail, matchContacts } from "@/server/offers/service";
-import { deleteUnusedMedia, readMedia, uploadMedia } from "@/server/storage/media";
+import { deleteUnusedMedia, readAvatarOriginal, readMedia, uploadMedia } from "@/server/storage/media";
 
 type Context = { params: Promise<{ path: string[] }> };
 async function dispatch(request: Request, context: Context) {
@@ -51,8 +51,13 @@ async function dispatch(request: Request, context: Context) {
   }
   if (parts[0] === "feed" && parts[1] === "specialists" && parts.length === 2 && method === "GET") return Response.json(await candidateFeed(user.id, request.url));
   if (parts[0] === "media") {
-    if (parts.length === 1 && method === "POST") return Response.json(await uploadMedia(user.id, user.role, await request.formData()), { status: 201 });
-    if (parts.length === 2 && method === "GET") return readMedia(user.id, id(1));
+    if (parts.length === 1 && method === "POST") {
+      const size = Number(request.headers.get("content-length"));
+      if (size > 6 * 1024 * 1024) fail(413, "FILE_TOO_LARGE", "Файл больше 5 МБ");
+      return Response.json(await uploadMedia(user.id, user.role, await request.formData()), { status: 201 });
+    }
+    if (parts.length === 2 && method === "GET") return readMedia(user.id, id(1), request.url);
+    if (parts.length === 3 && parts[2] === "original" && method === "GET") return readAvatarOriginal(user.id, id(1));
     if (parts.length === 2 && method === "DELETE") { await deleteUnusedMedia(user.id, id(1)); return new Response(null, { status: 204 }); }
   }
   if (parts[0] === "offers") {

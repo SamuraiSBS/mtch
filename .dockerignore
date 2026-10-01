@@ -7,4 +7,6 @@ node_modules
 .tmp
 .localappdata
 media
+photo-processor/tmp*
+photo-processor/__pycache__
 coverage

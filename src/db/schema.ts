@@ -44,6 +44,13 @@ export const mediaFiles = pgTable("media_files", {
   id: uuid("id").primaryKey().defaultRandom(), ownerUserId: text("owner_user_id").notNull().references(() => user.id), kind: mediaKindEnum("kind").notNull(),
   storageKey: text("storage_key").notNull().unique(), mimeType: varchar("mime_type", { length: 80 }).notNull(), byteSize: integer("byte_size").notNull(), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, t => [index("media_owner_idx").on(t.ownerUserId)]);
+export const avatarAssets = pgTable("avatar_assets", {
+  fileId: uuid("file_id").primaryKey().references(() => mediaFiles.id, { onDelete: "cascade" }),
+  originalStorageKey: text("original_storage_key").notNull().unique(),
+  mediumStorageKey: text("medium_storage_key").notNull().unique(),
+  smallStorageKey: text("small_storage_key").notNull().unique(),
+  originalMimeType: varchar("original_mime_type", { length: 80 }).notNull(),
+});
 export const specialistProfiles = pgTable("specialist_profiles", {
   userId: text("user_id").primaryKey().references(() => user.id), firstName: varchar("first_name", { length: 100 }).notNull(), lastName: varchar("last_name", { length: 100 }).notNull(),
   birthDate: date("birth_date"), cityId: uuid("city_id").references(() => cities.id), avatarFileId: uuid("avatar_file_id").notNull().references(() => mediaFiles.id),
