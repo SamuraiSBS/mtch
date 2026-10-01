@@ -17,7 +17,9 @@ export default function Home() {
           <Link className="button secondary landing-hero__cta" href="/register?role=SPECIALIST">Я специалист</Link>
         </div>
       </div>
-      <Image className="landing-hero__mascot" src="/poza 1.png" width={1086} height={1448} sizes="(max-width: 600px) 0px, (max-width: 1100px) 55vw, 650px" alt="" aria-hidden="true" priority />
+      <div className="landing-hero__mascot" aria-hidden="true">
+        <Image src="/poza 1.png" width={1086} height={1448} sizes="(max-width: 600px) 70vw, (max-width: 1100px) 55vw, 650px" alt="" priority />
+      </div>
     </section>
   );
 }
