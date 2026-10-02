@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { UiIcon } from "@/components/ui-icon";
 
 export default function Home() {
   return (
@@ -17,7 +19,7 @@ export default function Home() {
         </h1>
         <p className="landing-hero__description">Проверенные IT-специалисты<br />и квалифицированные работодатели</p>
         <div className="landing-hero__actions">
-          <Link className="button landing-hero__cta" href="/register?role=EMPLOYER">Я работодатель <span aria-hidden="true">→</span></Link>
+          <Link className="button landing-hero__cta" href="/register?role=EMPLOYER">Я работодатель <UiIcon icon={ArrowRight} size={20} /></Link>
           <Link className="button secondary landing-hero__cta" href="/register?role=SPECIALIST">Я специалист</Link>
         </div>
       </div>

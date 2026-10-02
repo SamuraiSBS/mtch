@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Building2, GraduationCap, Handshake, Inbox, Send, SlidersHorizontal, UserRound, UsersRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { api, send } from "./api";
+import { UiIcon } from "./ui-icon";
 import { SpecialistProfileWizard } from "./workspace-specialist-wizard";
 import { CompanyPanel } from "./workspace-company";
 import { SearchPanel, FeedPanel } from "./workspace-search";
@@ -16,19 +19,19 @@ type Section = "home" | "profile" | "practice-invitations" | "offers" | "match" 
 type User = { id: string; email: string; role: "SPECIALIST" | "EMPLOYER"; hasProfile: boolean; hasCompany: boolean };
 const emptyCatalogs: Catalogs = { professions: [], cities: [], skills: [] };
 
-const specialistPages: { section: Section; href: string; label: string }[] = [
-  { section: "profile", href: "/profile", label: "Моя анкета" },
-  { section: "practice-invitations", href: "/practice-invitations", label: "Практика" },
-  { section: "offers", href: "/offers", label: "Предложения" },
-  { section: "match", href: "/match", label: "Match" },
+const specialistPages: { section: Section; href: string; label: string; icon: LucideIcon }[] = [
+  { section: "profile", href: "/profile", label: "Моя анкета", icon: UserRound },
+  { section: "practice-invitations", href: "/practice-invitations", label: "Практика", icon: GraduationCap },
+  { section: "offers", href: "/offers", label: "Предложения", icon: Inbox },
+  { section: "match", href: "/match", label: "Match", icon: Handshake },
 ];
-const employerPages: { section: Section; href: string; label: string }[] = [
-  { section: "company", href: "/company", label: "Компания" },
-  { section: "search", href: "/search", label: "Профили поиска" },
-  { section: "feed", href: "/feed", label: "Лента" },
-  { section: "practice", href: "/practice", label: "Практика" },
-  { section: "offers", href: "/offers", label: "Предложения" },
-  { section: "match", href: "/match", label: "Match" },
+const employerPages: { section: Section; href: string; label: string; icon: LucideIcon }[] = [
+  { section: "company", href: "/company", label: "Компания", icon: Building2 },
+  { section: "search", href: "/search", label: "Профили поиска", icon: SlidersHorizontal },
+  { section: "feed", href: "/feed", label: "Лента", icon: UsersRound },
+  { section: "practice", href: "/practice", label: "Практика", icon: GraduationCap },
+  { section: "offers", href: "/offers", label: "Предложения", icon: Send },
+  { section: "match", href: "/match", label: "Match", icon: Handshake },
 ];
 
 export function Workspace({ section }: { section: Section }) {
@@ -97,7 +100,7 @@ export function Workspace({ section }: { section: Section }) {
       <button className="secondary" onClick={async () => { await send("/auth/logout", "POST"); router.replace("/"); }}>Выйти</button>
     </div>}
     {!specialistProfile && profileSaved && <nav className="workspace-nav" aria-label="Разделы кабинета">
-      {pages.map((page) => <Link key={page.section} className={section === page.section ? "workspace-nav__link active" : "workspace-nav__link"} aria-current={section === page.section ? "page" : undefined} href={page.href}>{page.label}</Link>)}
+      {pages.map((page) => <Link key={page.section} className={section === page.section ? "workspace-nav__link active" : "workspace-nav__link"} aria-current={section === page.section ? "page" : undefined} href={page.href}><UiIcon icon={page.icon} size={16} /><span>{page.label}</span></Link>)}
     </nav>}
     {(profileSaved || section === "profile") && <>
       {specialistProfile && <SpecialistProfileWizard

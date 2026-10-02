@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import { ArrowLeft, ArrowRight, Camera, Check, FileText, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api, send } from "./api";
+import { UiIcon } from "./ui-icon";
 import { EMPLOYMENT, EXPERIENCE, LEVEL, WORK } from "./fields";
 import type { Catalogs, Item } from "./workspace";
 import { DIRECTIONS, GOALS } from "./practice-options";
@@ -342,7 +344,7 @@ function SkillPicker({
       <div className="profile-skills__selected" aria-live="polite">
         {selectedItems.slice(0, 5).map((item) => <span className="profile-skill-chip" key={item.id}>
           {item.name}
-          <button type="button" aria-label={`Убрать навык ${item.name}`} onClick={() => toggle(item.id)}>×</button>
+          <button type="button" aria-label={`Убрать навык ${item.name}`} onClick={() => toggle(item.id)}><UiIcon icon={X} size={12} /></button>
         </span>)}
         {selectedItems.length > 5 && <span className="profile-skill-more">+{selectedItems.length - 5}</span>}
         <input
@@ -401,7 +403,7 @@ function AvatarUploader({
     <div className={fileId ? "profile-photo-upload has-photo" : "profile-photo-upload"}>
       {fileId
         ? <Image src={`/api/v1/media/${fileId}?size=256`} width={256} height={256} unoptimized alt="Предварительный просмотр фото профиля" />
-        : <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M14 11.5 16.2 8h7.6l2.2 3.5H33a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-15a3 3 0 0 1 3-3h7Z" /><circle cx="20" cy="21" r="6" /><path d="M31 5v7M27.5 8.5h7" /></svg>}
+        : <UiIcon icon={Camera} size={32} className="profile-photo-upload__icon" />}
       <label className="profile-photo-upload__action" htmlFor={inputId}>{loading ? "Обрабатываем фото…" : fileId ? "Заменить фото" : "Загрузить фото"}</label>
       <input
         id={inputId}
@@ -724,7 +726,7 @@ export function SpecialistProfileWizard({
               }} error={errors.desiredDirections} columns={4} />
               <div className="profile-choice__selected-list" aria-live="polite">
                 {form.desiredDirections.map((direction) => <button type="button" key={direction} onClick={() => update("desiredDirections", form.desiredDirections.filter((item) => item !== direction))}>
-                  {labelFor(direction, DIRECTIONS as Choice[])} <span aria-hidden="true">×</span>
+                  {labelFor(direction, DIRECTIONS as Choice[])} <UiIcon icon={X} size={12} />
                 </button>)}
               </div>
               <MultiChoiceField label="Формат практики" name="practiceWorkFormats" values={form.practiceWorkFormats} options={WORK as Choice[]} onToggle={(value) => update("practiceWorkFormats", form.practiceWorkFormats.includes(value)
@@ -732,7 +734,7 @@ export function SpecialistProfileWizard({
                 : [...form.practiceWorkFormats, value])} error={errors.practiceWorkFormats} columns={3} />
               <div className="profile-choice__selected-list" aria-live="polite">
                 {form.practiceWorkFormats.map((format) => <button type="button" key={format} onClick={() => update("practiceWorkFormats", form.practiceWorkFormats.filter((item) => item !== format))}>
-                  {labelFor(format, WORK as Choice[])} <span aria-hidden="true">×</span>
+                  {labelFor(format, WORK as Choice[])} <UiIcon icon={X} size={12} />
                 </button>)}
               </div>
               {errors.cityId && <p className="profile-field__error" role="alert">{errors.cityId} <button type="button" className="profile-inline-link" onClick={() => { setStep(1); setErrors({}); }}>Указать город</button></p>}
@@ -750,16 +752,16 @@ export function SpecialistProfileWizard({
                 <ProfileTextField label="Behance / GitLab" name="behanceGitlabUrl" type="url" value={form.behanceGitlabUrl} onChange={(value) => update("behanceGitlabUrl", value)} placeholder="https://behance.net/…" />
                 <ProfileTextField label="Telegram для связи" name="telegram" value={form.telegram} onChange={(value) => update("telegram", value)} maxLength={100} placeholder="@username" />
               </div>
-              <div className="profile-resume-note"><span aria-hidden="true">↗</span><div><strong>Резюме PDF</strong><p>Загрузка появится позже</p></div></div>
+              <div className="profile-resume-note"><UiIcon icon={FileText} size={18} className="profile-resume-note__icon" /><div><strong>Резюме PDF</strong><p>Загрузка появится позже</p></div></div>
             </div>}
           </div>
 
           {message && <p className={messageIsError ? "profile-wizard__message is-error" : "profile-wizard__message"} role={messageIsError ? "alert" : "status"}>{message}</p>}
           <footer className="profile-wizard__actions">
-            <button type="button" className="profile-wizard__back" onClick={goBack} disabled={step === 1} aria-disabled={step === 1}>Назад</button>
+            <button type="button" className="profile-wizard__back" onClick={goBack} disabled={step === 1} aria-disabled={step === 1}><UiIcon icon={ArrowLeft} size={14} />Назад</button>
             <button type="submit" className="profile-wizard__next" disabled={!ready || saving || processingPhoto}>
               {saving ? "Сохраняем…" : step === totalSteps ? "Завершить" : "Далее"}
-              {!saving && <span aria-hidden="true">{step === totalSteps ? "✓" : "→"}</span>}
+              {!saving && <UiIcon icon={step === totalSteps ? Check : ArrowRight} size={16} className="profile-wizard__next-icon" />}
             </button>
           </footer>
         </form>}
@@ -770,7 +772,9 @@ export function SpecialistProfileWizard({
           <div className="profile-preview__avatar">
             {form.avatarFileId
               ? <Image src={`/api/v1/media/${form.avatarFileId}?size=256`} width={256} height={256} unoptimized alt="" />
-              : <span aria-hidden="true">{form.firstName ? form.firstName.slice(0, 1).toUpperCase() : "○"}</span>}
+              : form.firstName
+                ? <span aria-hidden="true">{form.firstName.slice(0, 1).toUpperCase()}</span>
+                : <UiIcon icon={UserRound} size={28} />}
           </div>
           <div className="profile-preview__name-block">
             <h2>{[form.firstName.trim(), form.lastName.trim()].filter(Boolean).join(" ") || "Ваше имя и фамилия"}</h2>
