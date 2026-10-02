@@ -1,7 +1,7 @@
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { cities, companies, practiceInvitations, practiceRecruitments, specialistProfiles, specialistSkills, user } from "@/db/schema";
+import { cities, companies, companySocialLinks, practiceInvitations, practiceRecruitments, specialistProfiles, specialistSkills, user } from "@/db/schema";
 import { ownCompany } from "@/server/companies/service";
 import { requireCatalogId, requireSkills } from "@/server/catalogs/service";
 import { fail, pageParams, paged } from "@/server/http";
@@ -146,6 +146,7 @@ export async function practiceContacts(userId: string, role: "SPECIALIST" | "EMP
     return { email: account.email, telegram: profile?.telegram ?? null };
   }
   const [account] = await db.select({ email: user.email }).from(user).where(eq(user.id, invitation.employerUserId));
-  const [company] = await db.select({ contactEmail: companies.contactEmail, telegram: companies.telegram, phone: companies.phone }).from(companies).where(eq(companies.ownerUserId, invitation.employerUserId));
-  return { email: account.email, contactEmail: company?.contactEmail ?? null, telegram: company?.telegram ?? null, phone: company?.phone ?? null };
+  const [company] = await db.select({ id: companies.id, contactEmail: companies.contactEmail, telegram: companies.telegram, phone: companies.phone }).from(companies).where(eq(companies.ownerUserId, invitation.employerUserId));
+  const socialLinks = company ? await db.select({ platform: companySocialLinks.platform, value: companySocialLinks.value }).from(companySocialLinks).where(eq(companySocialLinks.companyId, company.id)).orderBy(asc(companySocialLinks.sortOrder), asc(companySocialLinks.createdAt)) : [];
+  return { email: account.email, contactEmail: company?.contactEmail ?? null, telegram: company?.telegram ?? null, phone: company?.phone ?? null, socialLinks };
 }

@@ -29,6 +29,13 @@
       "when": 1790886346464,
       "tag": "0003_condemned_eddie_brock",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790972266535,
+      "tag": "0004_bright_screwball",
+      "breakpoints": true
     }
   ]
 }

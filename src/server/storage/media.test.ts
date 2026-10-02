@@ -25,7 +25,15 @@ describe("media upload guards", () => {
     await expect(uploadMedia("owner", "SPECIALIST", form("AVATAR", new Uint8Array(5 * 1024 * 1024 + 1)))).rejects.toMatchObject({ status: 413, code: "FILE_TOO_LARGE" });
   });
 
+  it("applies the five megabyte limit to company photographs too", async () => {
+    await expect(uploadMedia("owner", "EMPLOYER", form("COMPANY_PHOTO", new Uint8Array(5 * 1024 * 1024 + 1)))).rejects.toMatchObject({ status: 413, code: "FILE_TOO_LARGE" });
+  });
+
   it("rejects mismatched MIME and image signature", async () => {
     await expect(uploadMedia("owner", "SPECIALIST", form("AVATAR", tinyPng, "image/jpeg"))).rejects.toMatchObject({ status: 415, code: "UNSUPPORTED_MEDIA" });
+  });
+
+  it("checks the actual image signature for company photos", async () => {
+    await expect(uploadMedia("owner", "EMPLOYER", form("COMPANY_PHOTO", tinyPng, "image/jpeg"))).rejects.toMatchObject({ status: 415, code: "UNSUPPORTED_MEDIA" });
   });
 });

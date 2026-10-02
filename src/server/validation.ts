@@ -29,7 +29,49 @@ export const specialistInput = z.object({
     if (x.practiceWorkFormats && new Set(x.practiceWorkFormats).size !== x.practiceWorkFormats.length) issue("practiceWorkFormats", "Форматы не должны повторяться");
   } else if (!x.salaryMinRub || !x.salaryMaxRub || x.salaryMaxRub < x.salaryMinRub) issue("salaryMaxRub", "Укажите корректный диапазон зарплаты");
 });
-export const companyInput = z.object({ name: z.string().trim().min(1).max(160), description: z.string().trim().min(1).max(500), workFormat: z.enum(["REMOTE", "HYBRID", "OFFICE"]), foundedYear: z.number().int().min(1800).max(new Date().getFullYear()), sizeBand: z.enum(["1-10", "11-50", "51-200", "201-1000", "1000+"]), industry: z.string().trim().min(1).max(120), websiteUrl: optionalUrl, logoFileId: z.uuid(), contactEmail: z.union([z.email(), z.literal(""), z.null()]).optional().transform(v => v || null), telegram: optionalText(100), phone: optionalText(50) });
+export const companySocialPlatforms = ["TELEGRAM", "VK", "LINKEDIN", "YOUTUBE", "INSTAGRAM", "TIKTOK", "X", "OTHER"] as const;
+export const companyPhotoCategories = ["OFFICE", "TEAM", "WORKSPACE", "PROCESSES", "OTHER"] as const;
+const companySocialLinkInput = z.object({
+  platform: z.enum(companySocialPlatforms),
+  value: z.string().trim().min(1).max(500),
+});
+const companyPhotoInput = z.object({
+  fileId: z.uuid(),
+  category: z.enum(companyPhotoCategories),
+  sortOrder: z.number().int().min(0),
+});
+export const companyInput = z.object({
+  name: z.string().trim().min(1).max(160),
+  description: z.string().trim().min(1).max(500),
+  workFormat: z.enum(["REMOTE", "HYBRID", "OFFICE"]),
+  foundedYear: z.number().int().min(1800).max(new Date().getFullYear()),
+  sizeBand: z.enum(["1-10", "11-50", "51-200", "201-1000", "1000+"]),
+  industry: z.string().trim().min(1).max(120),
+  websiteUrl: optionalUrl,
+  logoFileId: z.uuid(),
+  contactEmail: z.union([z.email(), z.literal(""), z.null()]).optional().transform(v => v || null),
+  telegram: optionalText(100),
+  phone: optionalText(50),
+  socialLinks: z.array(companySocialLinkInput).optional(),
+  photos: z.array(companyPhotoInput).max(20).optional(),
+}).superRefine((company, ctx) => {
+  const seenLinks = new Set<string>();
+  for (const [index, link] of (company.socialLinks ?? []).entries()) {
+    const key = `${link.platform}:${link.value.normalize("NFKC").toLocaleLowerCase("ru-RU")}`;
+    if (seenLinks.has(key)) ctx.addIssue({ code: "custom", path: ["socialLinks", index, "value"], message: "Эта запись уже добавлена" });
+    seenLinks.add(key);
+  }
+
+  const seenPhotos = new Set<string>();
+  const seenOrders = new Set<string>();
+  for (const [index, photo] of (company.photos ?? []).entries()) {
+    if (seenPhotos.has(photo.fileId)) ctx.addIssue({ code: "custom", path: ["photos", index, "fileId"], message: "Фото не должно повторяться" });
+    seenPhotos.add(photo.fileId);
+    const order = `${photo.category}:${photo.sortOrder}`;
+    if (seenOrders.has(order)) ctx.addIssue({ code: "custom", path: ["photos", index, "sortOrder"], message: "Порядок фото в группе должен быть уникальным" });
+    seenOrders.add(order);
+  }
+});
 export const searchInput = z.object({ title: z.string().trim().min(1).max(160), professionId: z.uuid(), targetLevel: z.enum(["INTERN", "JUNIOR", "MIDDLE", "SENIOR"]), minimumExperience: z.enum(["NONE", "UNDER_1", "FROM_1_TO_3", "FROM_3_TO_5", "OVER_5"]), skillIds: z.array(z.uuid()).min(1), ...salary, workFormat: z.enum(["REMOTE", "HYBRID", "OFFICE"]), employmentType: z.enum(["FULL_TIME", "PART_TIME", "PROJECT", "INTERNSHIP"]) }).refine(salaryCheck, { path: ["salaryMaxRub"], message: "Максимальная зарплата ниже минимальной" });
 export const offerInput = z.object({ specialistUserId: z.string().uuid(), searchProfileId: z.uuid(), positionTitle: z.string().trim().min(1).max(160), ...salary, description: z.string().trim().min(1).max(5000), workFormat: z.enum(["REMOTE", "HYBRID", "OFFICE"]), employmentType: z.enum(["FULL_TIME", "PART_TIME", "PROJECT", "INTERNSHIP"]), message: z.string().trim().min(1).max(3000) }).refine(salaryCheck, { path: ["salaryMaxRub"], message: "Максимальная зарплата ниже минимальной" });
 export const practiceRecruitmentInput = z.object({

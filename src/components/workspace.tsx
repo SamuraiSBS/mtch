@@ -93,13 +93,14 @@ export function Workspace({ section }: { section: Section }) {
   const title = pages.find((page) => page.section === section)?.label ?? "Кабинет";
   const profileSaved = me.role !== "SPECIALIST" || me.hasProfile;
   const specialistProfile = section === "profile" && me.role === "SPECIALIST";
+  const companyWizard = section === "company" && me.role === "EMPLOYER";
 
-  return <div className={specialistProfile ? "workspace workspace--profile" : "workspace"}>
-    {!specialistProfile && <div className="workspace-heading">
+  return <div className={specialistProfile || companyWizard ? "workspace workspace--profile" : "workspace"}>
+    {!specialistProfile && !companyWizard && <div className="workspace-heading">
       <div><h1>{title}</h1><p>{me.email}</p></div>
       <button className="secondary" onClick={async () => { await send("/auth/logout", "POST"); router.replace("/"); }}>Выйти</button>
     </div>}
-    {!specialistProfile && profileSaved && <nav className="workspace-nav" aria-label="Разделы кабинета">
+    {!specialistProfile && !companyWizard && profileSaved && <nav className="workspace-nav" aria-label="Разделы кабинета">
       {pages.map((page) => <Link key={page.section} className={section === page.section ? "workspace-nav__link active" : "workspace-nav__link"} aria-current={section === page.section ? "page" : undefined} href={page.href}><UiIcon icon={page.icon} size={16} /><span>{page.label}</span></Link>)}
     </nav>}
     {(profileSaved || section === "profile") && <>
@@ -113,7 +114,15 @@ export function Workspace({ section }: { section: Section }) {
         onLogout={async () => { await send("/auth/logout", "POST"); router.replace("/"); }}
       />}
       {section === "practice-invitations" && me.role === "SPECIALIST" && <SpecialistPracticePanel />}
-      {section === "company" && me.role === "EMPLOYER" && <CompanyPanel />}
+      {section === "company" && me.role === "EMPLOYER" && <CompanyPanel
+        userId={me.id}
+        email={me.email}
+        onSaved={() => {
+          setMe((old) => old ? { ...old, hasCompany: true } : old);
+          router.replace("/feed");
+        }}
+        onLogout={async () => { await send("/auth/logout", "POST"); router.replace("/"); }}
+      />}
       {section === "search" && me.role === "EMPLOYER" && <SearchPanel catalogs={catalogs} />}
       {section === "feed" && me.role === "EMPLOYER" && <FeedPanel catalogs={catalogs} />}
       {section === "practice" && me.role === "EMPLOYER" && <EmployerPracticePanel catalogs={catalogs} />}

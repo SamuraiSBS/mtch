@@ -13,7 +13,8 @@ export const practiceStatusEnum = pgEnum("practice_status", ["DRAFT", "ACTIVE", 
 export const practiceInvitationStatusEnum = pgEnum("practice_invitation_status", ["SENT", "VIEWED", "ACCEPTED", "DECLINED", "INTERVIEW", "HIRED"]);
 export const offerStatusEnum = pgEnum("offer_status", ["SENT", "ACCEPTED", "REJECTED", "WITHDRAWN"]);
 export const mediaKindEnum = pgEnum("media_kind", ["AVATAR", "COMPANY_LOGO", "COMPANY_PHOTO"]);
-export const socialPlatformEnum = pgEnum("social_platform", ["TELEGRAM", "INSTAGRAM", "TIKTOK", "OTHER"]);
+export const socialPlatformEnum = pgEnum("social_platform", ["TELEGRAM", "VK", "LINKEDIN", "YOUTUBE", "INSTAGRAM", "TIKTOK", "X", "OTHER"]);
+export const companyPhotoCategoryEnum = pgEnum("company_photo_category", ["OFFICE", "TEAM", "WORKSPACE", "PROCESSES", "OTHER"]);
 export const sizeBandEnum = pgEnum("size_band", ["1-10", "11-50", "51-200", "201-1000", "1000+"]);
 
 export const user = pgTable("user", {
@@ -74,7 +75,7 @@ export const companies = pgTable("companies", {
   logoFileId: uuid("logo_file_id").notNull().references(() => mediaFiles.id), contactEmail: text("contact_email"), telegram: text("telegram"), phone: text("phone"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, t => [check("company_founded_year_check", sql`${t.foundedYear} >= 1800`) ]);
-export const companyPhotos = pgTable("company_photos", { id: uuid("id").primaryKey().defaultRandom(), companyId: uuid("company_id").notNull().references(() => companies.id), fileId: uuid("file_id").notNull().unique().references(() => mediaFiles.id), sortOrder: integer("sort_order").notNull().default(0), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow() });
+export const companyPhotos = pgTable("company_photos", { id: uuid("id").primaryKey().defaultRandom(), companyId: uuid("company_id").notNull().references(() => companies.id), fileId: uuid("file_id").notNull().unique().references(() => mediaFiles.id), category: companyPhotoCategoryEnum("category").notNull().default("OTHER"), sortOrder: integer("sort_order").notNull().default(0), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow() });
 export const companySocialLinks = pgTable("company_social_links", { id: uuid("id").primaryKey().defaultRandom(), companyId: uuid("company_id").notNull().references(() => companies.id), platform: socialPlatformEnum("platform").notNull(), value: text("value").notNull(), sortOrder: integer("sort_order").notNull().default(0), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow() }, t => [uniqueIndex("company_social_unique").on(t.companyId, t.platform, t.value)]);
 
 export const searchProfiles = pgTable("search_profiles", {

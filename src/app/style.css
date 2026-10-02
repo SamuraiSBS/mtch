@@ -338,3 +338,67 @@ body:has(.profile-wizard) .site-header__logo { width: 88px; }
   .profile-wizard__actions { position: sticky; bottom: 0; padding: 12px 0 4px; background: var(--color-background); }
   .profile-preview--intro .profile-preview__avatar { height: 120px; }
 }
+
+.company-wizard__account { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.company-wizard__account > span { overflow: hidden; color: var(--color-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.company-wizard__step-fields { display: block; width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; }
+.company-wizard__step-one { gap: 13px; }
+.company-logo-upload { position: relative; display: grid; place-items: center; align-content: center; gap: 9px; width: min(100%, 240px); min-height: 150px; padding: 12px; overflow: hidden; border: 1px dashed var(--color-border); border-radius: 6px; background: var(--color-surface); color: var(--color-link); font-size: 12px; text-align: center; cursor: pointer; }
+.company-logo-upload:hover { border-color: var(--color-muted); background: var(--color-surface-raised); }
+.company-logo-upload:focus-within { outline: 2px solid var(--color-link); outline-offset: 2px; }
+.company-logo-upload img { display: block; width: 100%; height: 112px; object-fit: contain; }
+.company-logo-upload.has-logo { border-style: solid; }
+.company-logo-upload__icon { color: var(--color-muted); }
+.company-logo-upload input[type="file"],
+.company-photo-add input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.company-logo-upload__hint { justify-self: start; }
+.company-wizard__privacy-note { max-width: 66ch; margin: 0; color: var(--color-muted); font-size: 12px; line-height: 1.5; }
+.company-wizard__socials { display: grid; gap: 8px; }
+.company-wizard__socials > h2 { margin: 0; font-size: 15px; }
+.company-wizard__socials > p { margin: -4px 0 2px; color: var(--color-muted); font-size: 11px; }
+.company-social-row { display: grid; grid-template-columns: minmax(150px, .8fr) minmax(0, 1.4fr) 38px; align-items: end; gap: 10px; padding-bottom: 9px; border-bottom: 1px solid color-mix(in oklch, var(--color-border) 72%, transparent); }
+.company-social-row__remove { display: grid; place-items: center; width: 38px; min-height: 39px; padding: 0; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-muted); }
+.company-social-row__remove:hover { border-color: var(--color-error); color: var(--color-error); }
+.company-wizard__add { display: inline-flex; justify-self: start; align-items: center; gap: 7px; min-height: 36px; padding: 4px 0; border: 0; background: transparent; color: var(--color-link); font-size: 12px; }
+.company-wizard__add:hover { color: var(--color-text); }
+.company-wizard__photo-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.company-wizard__photo-heading p { margin: 0; color: var(--color-muted); font-size: 12px; }
+.company-wizard__photo-heading > span { flex: 0 0 auto; color: var(--color-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.company-photo-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 22px; }
+.company-photo-group { display: grid; align-content: start; gap: 9px; min-width: 0; padding-bottom: 14px; border-bottom: 1px solid var(--color-border); }
+.company-photo-group__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.company-photo-group__header h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.company-photo-group__header > span { color: var(--color-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.company-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 7px; }
+.company-photo-thumb { position: relative; aspect-ratio: 4 / 3; min-width: 0; overflow: hidden; border-radius: 5px; background: var(--color-surface-raised); }
+.company-photo-thumb > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.company-photo-thumb > button { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 26px; min-height: 26px; padding: 0; border: 1px solid color-mix(in oklch, var(--color-text) 25%, transparent); border-radius: 4px; background: var(--color-background); color: var(--color-text); }
+.company-photo-thumb > button:hover { border-color: var(--color-error); color: var(--color-error); }
+.company-photo-add { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 40px; border: 1px dashed var(--color-border); border-radius: 5px; color: var(--color-link); font-size: 11px; cursor: pointer; }
+.company-photo-add:hover { border-color: var(--color-muted); background: var(--color-surface); }
+.company-photo-add:focus-within { outline: 2px solid var(--color-link); outline-offset: 2px; }
+.company-photo-add input[type="file"] { inset: 0; width: 100%; height: 100%; clip-path: none; opacity: 0; cursor: pointer; }
+.company-wizard__upload-hint { margin: 0; color: var(--color-muted); font-size: 10px; }
+.company-preview__logo { border-radius: 7px; }
+.company-preview__logo img { object-fit: contain; }
+.company-preview__photo-row { display: grid; gap: 7px; padding: 9px 0; border-bottom: 1px solid color-mix(in oklch, var(--color-border) 72%, transparent); }
+.company-preview__photo-row > span { color: var(--color-muted); font-size: 10px; }
+.company-preview__photos { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.company-preview__photos > img { display: block; width: 46px; height: 36px; border-radius: 4px; background: var(--color-surface-raised); object-fit: cover; }
+.company-preview__more { display: grid; place-items: center; width: 46px; height: 36px; border-radius: 4px; background: var(--color-surface-raised); color: var(--color-muted); font-size: 10px; }
+
+@media (max-width: 820px) {
+  .company-wizard__main { min-height: 480px; }
+  .company-wizard__photos-step { padding-bottom: 16px; }
+}
+
+@media (max-width: 600px) {
+  .company-wizard__account { gap: 8px; }
+  .company-wizard__account > span { display: none; }
+  .company-wizard__photo-heading { align-items: flex-start; }
+  .company-photo-groups { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .company-social-row { grid-template-columns: minmax(0, 1fr) 40px; gap: 8px; }
+  .company-social-row > .profile-field:first-child { grid-column: 1 / -1; }
+  .company-social-row > .profile-field:nth-child(2) { grid-column: 1; }
+  .company-social-row__remove { grid-column: 2; align-self: end; width: 40px; }
+}
