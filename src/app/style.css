@@ -333,15 +333,17 @@ legend { color: var(--color-muted); }
 .auth-register:hover { border-color: rgba(255,255,255,.56); background: rgba(255,255,255,.045); color: white; }
 .auth-page__mascot {
   position: absolute;
-  right: clamp(18px, 5vw, 90px);
-  bottom: 4%;
-  z-index: 1;
-  width: min(52vw, 790px);
-  height: min(91vh, 960px);
+  right: clamp(40px, 6vw, 96px);
+  bottom: 0;
+  z-index: 0;
+  height: min(100%, 800px);
+  width: auto;
+  max-width: none;
+  display: block;
   pointer-events: none;
-  filter: drop-shadow(0 0 36px rgba(179,0,37,.28));
+  filter: drop-shadow(-16px 0 23px color-mix(in oklch, var(--color-accent) 38%, transparent));
 }
-.auth-page__mascot img { object-fit: contain; object-position: bottom; }
+.auth-page__mascot img { display: block; width: auto; height: 100%; max-width: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .workspace-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0; }
@@ -361,7 +363,10 @@ button:disabled { opacity: 0.55; cursor: wait; }
 
 @media (min-width: 761px) and (max-width: 1400px) {
   .auth-panel { width: min(56%, 560px); padding: 34px; }
-  .auth-page__mascot { right: 0; width: 42vw; height: 76vh; opacity: .8; }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .auth-page__mascot { right: 0; height: 75%; opacity: .65; }
 }
 
 @media (max-width: 600px) {
@@ -390,7 +395,8 @@ button:disabled { opacity: 0.55; cursor: wait; }
   .auth-form { gap: 14px; }
   .auth-role { gap: 8px; min-height: 60px; padding: 10px 8px; font-size: 14px; }
   .auth-role > svg { flex-basis: 21px; width: 21px; height: 21px; }
-  .auth-page__mascot { right: -25vw; bottom: 0; width: 90vw; height: 48vh; opacity: .2; }
+  .auth-page__mascot { right: 16px; height: 250px; }
+  .auth-page__mascot img { max-width: 75vw; height: 100%; object-fit: contain; object-position: bottom; }
   .auth-page::before { inset: 0 0 8%; background-size: 100% 100%, 100% 100%, 100% 100%; opacity: .6; }
 }
 

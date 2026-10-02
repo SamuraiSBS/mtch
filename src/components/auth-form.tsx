@@ -68,12 +68,12 @@ export function AuthForm({ mode, initialRole = "SPECIALIST" }: AuthFormProps) {
     <section className="auth-page" aria-labelledby="auth-title">
       <div className="auth-page__mascot" aria-hidden="true">
         <Image
-          src="/login-fox.png"
-          fill
-          sizes="(max-width: 760px) 90vw, 52vw"
+          src={isLogin ? "/login-fox.png" : "/register-fox.png"}
+          width={1086}
+          height={1448}
+          sizes="(max-width: 600px) 190px, (max-width: 900px) 75vw, 650px"
           alt=""
           priority
-          style={{ objectFit: "contain", objectPosition: "bottom" }}
         />
       </div>
       <div className="auth-page__content">
