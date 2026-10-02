@@ -1,7 +1,6 @@
 """Local CPU portrait normalization. CLI: processor.py input output-directory."""
 
 import json
-import math
 import os
 import sys
 import time
@@ -10,18 +9,20 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import onnxruntime as ort
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 ROOT = Path(__file__).resolve().parent
 FACE_MODEL = ROOT / "models/face_detection_yunet_2023mar.onnx"
-PERSON_MODEL = ROOT / "models/human_segmentation_pphumanseg_2023mar.onnx"
+PERSON_MATTING_MODEL = ROOT / "models/ppmattingv2-stdc1-human_512.onnx"
+PERSON_SEGMENTATION_MODEL = ROOT / "models/human_segmentation_pphumanseg_2023mar.onnx"
 BACKGROUND = (242, 242, 240)
+MATTING_INPUT_SIZE = 512
 MAX_PIXELS = 24_000_000
 MIN_SIDE = 256
 DETECTION_MAX_SIDE = 640
 HEAD_RATIO = 0.45
 TOP_MARGIN = 0.22
-MAX_ROTATION = 15.0
 WEBP_QUALITY = 88
 SIZES = (800, 256, 64)
 
@@ -38,29 +39,6 @@ def select_face(faces, image_width, image_height):
     largest = max(float(face[2] * face[3]) for face in faces)
     close = [face for face in faces if face[2] * face[3] >= largest * 0.88]
     return min(close, key=lambda face: (face[0] + face[2] / 2 - image_width / 2) ** 2 + (face[1] + face[3] / 2 - image_height / 2) ** 2)
-
-
-def tilt_angle(face):
-    # YuNet points: right eye, left eye, nose, right mouth, left mouth.
-    return math.degrees(math.atan2(float(face[7] - face[5]), float(face[6] - face[4])))
-
-
-def refine_tilt(image, face, detector):
-    x, y, width, height = [float(v) for v in face[:4]]
-    side = max(1, round(max(width, height) * 3))
-    left = round(x + width / 2 - side / 2)
-    top = round(y + height / 2 - side / 2)
-    detail = Image.new("RGB", (side, side), BACKGROUND)
-    detail.paste(image, (-left, -top))
-    detail = detail.resize((640, 640), Image.Resampling.LANCZOS)
-    try:
-        return tilt_angle(select_face(detect(detail, detector), 640, 640))
-    except PhotoError:
-        return tilt_angle(face)
-
-
-def rotation_for(angle):
-    return angle if 1 <= abs(angle) <= MAX_ROTATION else 0.0
 
 
 def peak_memory_mb():
@@ -141,7 +119,7 @@ def normalize(image, grayscale, valid_area):
     return Image.fromarray(np.uint8(np.clip(data, 0, 255)))
 
 
-def person_mask(image, model):
+def segmentation_mask(image, model):
     rgb = np.asarray(image)
     small = cv2.resize(rgb, (192, 192), interpolation=cv2.INTER_AREA).astype(np.float32)
     blob = cv2.dnn.blobFromImage((small / 255.0 - 0.5) / 0.5)
@@ -157,6 +135,22 @@ def person_mask(image, model):
     # Continue only foreground already present just above that narrow border.
     edge = max(2, round(image.height * 0.015))
     probability[-edge:, :] = np.maximum(probability[-edge:, :], probability[-edge - 1, :][None, :])
+    if float(np.max(probability)) < 0.5 or float(np.mean(probability)) < 0.02:
+        raise PhotoError("BACKGROUND_REMOVAL_FAILED", "Не удалось обработать фон")
+    return probability[:, :, None]
+
+
+def person_mask(image, model):
+    rgb = np.asarray(image)
+    small = cv2.resize(rgb, (MATTING_INPUT_SIZE, MATTING_INPUT_SIZE), interpolation=cv2.INTER_LINEAR)
+    tensor = ((small.astype(np.float32) / 255.0 - 0.5) / 0.5).transpose(2, 0, 1)[None, ...]
+    input_name = model.get_inputs()[0].name
+    output = model.run(None, {input_name: np.ascontiguousarray(tensor)})[0]
+    expected_shape = (1, 1, MATTING_INPUT_SIZE, MATTING_INPUT_SIZE)
+    if output.shape != expected_shape or not np.isfinite(output).all():
+        raise PhotoError("BACKGROUND_REMOVAL_FAILED", "Не удалось обработать фон")
+    probability = np.clip(output[0, 0], 0.0, 1.0)
+    probability = cv2.resize(probability, image.size, interpolation=cv2.INTER_LINEAR)
     if float(np.max(probability)) < 0.5 or float(np.mean(probability)) < 0.02:
         raise PhotoError("BACKGROUND_REMOVAL_FAILED", "Не удалось обработать фон")
     return probability[:, :, None]
@@ -189,11 +183,6 @@ def process(source, destination):
     detector = cv2.FaceDetectorYN.create(str(FACE_MODEL), "", (320, 320), 0.6, 0.3, 5000)
     faces = detect(image, detector)
     face = select_face(faces, *image.size)
-    angle = rotation_for(refine_tilt(image, face, detector))
-    if angle:
-        image = image.rotate(angle, resample=Image.Resampling.BICUBIC, expand=True, fillcolor=BACKGROUND)
-        faces = detect(image, detector)
-        face = select_face(faces, *image.size)
     box = crop_box(face)
     square = Image.new("RGB", (box[2] - box[0], box[3] - box[1]), BACKGROUND)
     square.paste(image, (-box[0], -box[1]))
@@ -203,17 +192,30 @@ def process(source, destination):
         square = square.resize((1600, 1600), Image.Resampling.LANCZOS)
         valid_area = valid_area.resize((1600, 1600), Image.Resampling.NEAREST)
     try:
-        model = cv2.dnn.readNet(str(PERSON_MODEL))
+        session_options = ort.SessionOptions()
+        session_options.intra_op_num_threads = 2
+        session_options.inter_op_num_threads = 1
+        session_options.log_severity_level = 3
+        model = ort.InferenceSession(
+            str(PERSON_MATTING_MODEL),
+            sess_options=session_options,
+            providers=["CPUExecutionProvider"],
+        )
         mask = person_mask(square, model)
-    except cv2.error as error:
-        raise PhotoError("BACKGROUND_REMOVAL_FAILED", "Не удалось обработать фон") from error
+    except Exception:
+        try:
+            fallback_model = cv2.dnn.readNet(str(PERSON_SEGMENTATION_MODEL))
+            mask = segmentation_mask(square, fallback_model)
+        except (cv2.error, PhotoError) as fallback_error:
+            raise PhotoError("BACKGROUND_REMOVAL_FAILED", "Не удалось обработать фон") from fallback_error
+    mask[np.asarray(valid_area) <= 127] = 0
     corrected = np.asarray(normalize(square, grayscale, valid_area), dtype=np.float32)
     result = corrected * mask + np.array(BACKGROUND, dtype=np.float32)[None, None, :] * (1 - mask)
     result = Image.fromarray(np.uint8(np.clip(result, 0, 255)))
     destination.mkdir(parents=True, exist_ok=True)
     for side in SIZES:
         result.resize((side, side), Image.Resampling.LANCZOS).save(destination / f"avatar_{side}.webp", "WEBP", lossless=True, quality=WEBP_QUALITY, method=6)
-    return {"faces": len(faces), "rotation": round(angle, 1), "durationMs": round((time.monotonic() - started) * 1000), "peakRssMb": peak_memory_mb()}
+    return {"faces": len(faces), "rotation": 0.0, "durationMs": round((time.monotonic() - started) * 1000), "peakRssMb": peak_memory_mb()}
 
 
 if __name__ == "__main__":
