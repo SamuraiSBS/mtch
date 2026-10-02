@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation";
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const isAuthPage = pathname === "/login" || pathname === "/register";
 
-  return <header className="site-header">
+  return <header className={`site-header${isAuthPage ? " site-header--auth" : ""}`}>
     <Link className="site-header__logo" href="/" aria-label="mtch — на главную">
       <Image src="/logo-header.png" width={2924} height={924} alt="" priority />
     </Link>
