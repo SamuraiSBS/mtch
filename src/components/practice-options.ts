@@ -1,0 +1,2 @@
+export const GOALS = [["JOB", "Работу"], ["INTERNSHIP", "Стажировку"], ["PRACTICE", "Производственную практику"], ["OPEN_TO_OFFERS", "Рассматриваю предложения"]];
+export const DIRECTIONS = [["backend", "Backend"], ["frontend", "Frontend"], ["mobile", "Mobile"], ["qa", "QA"], ["devops", "DevOps"], ["data_science", "Data Science"], ["machine_learning", "Machine Learning"], ["cybersecurity", "Кибербезопасность"], ["gamedev", "GameDev"], ["ui_ux", "UI/UX"], ["other", "Другое"]];

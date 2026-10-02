@@ -22,9 +22,14 @@ export async function saveSpecialist(userId: string, input: unknown, create: boo
   const [exists] = await db.select({ id: specialistProfiles.userId, avatarFileId: specialistProfiles.avatarFileId }).from(specialistProfiles).where(eq(specialistProfiles.userId, userId));
   if (create && exists) fail(409, "PROFILE_EXISTS", "Профиль уже создан"); if (!create && !exists) fail(404, "PROFILE_NOT_FOUND", "Профиль не найден");
   const { skillIds, ...fields } = data;
+  const practice = fields.employmentGoal === "PRACTICE";
+  const values = { ...fields, birthDate: fields.birthDate ?? null, cityId: fields.cityId ?? null,
+    educationalInstitution: practice ? fields.educationalInstitution! : null, educationProgram: practice ? fields.educationProgram! : null,
+    studyCourse: practice ? fields.studyCourse! : null, practiceStartDate: practice ? fields.practiceStartDate! : null, practiceEndDate: practice ? fields.practiceEndDate! : null,
+    desiredDirections: practice ? fields.desiredDirections! : null, practiceWorkFormats: practice ? fields.practiceWorkFormats! : null };
   await db.transaction(async tx => {
-    if (create) await tx.insert(specialistProfiles).values({ ...fields, userId, birthDate: fields.birthDate ?? null, cityId: fields.cityId ?? null });
-    else await tx.update(specialistProfiles).set({ ...fields, birthDate: fields.birthDate ?? null, cityId: fields.cityId ?? null, updatedAt: new Date() }).where(eq(specialistProfiles.userId, userId));
+    if (create) await tx.insert(specialistProfiles).values({ ...values, userId });
+    else await tx.update(specialistProfiles).set({ ...values, updatedAt: new Date() }).where(eq(specialistProfiles.userId, userId));
     await tx.delete(specialistSkills).where(eq(specialistSkills.specialistUserId, userId));
     await tx.insert(specialistSkills).values(skillIds.map(skillId => ({ specialistUserId: userId, skillId })));
   });

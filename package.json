@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "smoke": "node --import tsx scripts/smoke.ts",
+    "practice:smoke": "node --env-file-if-exists=.env --import tsx scripts/practice-smoke.ts",
+    "practice:api-smoke": "node --env-file-if-exists=.env --import tsx scripts/practice-api-smoke.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
     "db:seed": "node --env-file-if-exists=.env --import tsx scripts/seed.ts"

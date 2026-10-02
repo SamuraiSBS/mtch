@@ -1,5 +1,5 @@
 import { db, pool } from "../src/db/client";
-import { cities, companies, companySocialLinks, mediaFiles, offers, professions, searchProfiles, searchProfileSkills, skills, specialistProfiles, specialistSkills, user } from "../src/db/schema";
+import { cities, companies, companySocialLinks, mediaFiles, offers, practiceInvitations, practiceRecruitments, professions, searchProfiles, searchProfileSkills, skills, specialistProfiles, specialistSkills, user } from "../src/db/schema";
 import { eq, and } from "drizzle-orm";
 import { auth, withRegistrationRole, type Role } from "../src/server/auth/auth";
 import { localFileStorage } from "../src/server/storage/local";
@@ -14,7 +14,7 @@ async function media(ownerUserId: string, kind: "AVATAR" | "COMPANY_LOGO") { con
 async function main() {
   const allProfessions = await catalog(professions, ["Frontend-разработчик", "Backend-разработчик", "Fullstack-разработчик", "UI/UX Designer", "DevOps-инженер", "Data Scientist"]);
   const allCities = await catalog(cities, ["Москва", "Санкт-Петербург", "Казань", "Новосибирск", "Екатеринбург", "Самара", "Краснодар", "Томск"]);
-  const allSkills = await catalog(skills, ["React", "JavaScript", "TypeScript", "Python", "Figma", "Git", "Node.js", "PostgreSQL", "Docker", "Go", "Kubernetes", "Next.js", "SQL", "UI Research", "CSS"]);
+  const allSkills = await catalog(skills, ["React", "JavaScript", "TypeScript", "Python", "Figma", "Git", "Node.js", "PostgreSQL", "Docker", "Go", "Kubernetes", "Next.js", "SQL", "UI Research", "CSS", "FastAPI"]);
   const firstNames = ["Алексей","Мария","Илья","Алина","Дмитрий","София","Максим","Анна","Павел","Екатерина","Никита","Полина","Артём","Дарья","Кирилл","Ольга","Роман","Виктория","Тимур","Елена"];
   const lastNames = ["Петров","Соколова","Морозов","Волкова","Кузнецов","Орлова","Смирнов","Иванова","Попов","Крылова","Васильев","Лебедева","Федоров","Николаева","Андреев","Павлова","Романов","Зайцева","Белов","Миронова"];
   const specialistIds: string[] = [];
@@ -33,6 +33,25 @@ async function main() {
     for (let j=0;j<2;j++) { const profession=allProfessions[(i+j)%allProfessions.length]; const title=`${profession.name} ${j===0?"Middle":"Senior"}`; let [search]=await db.select().from(searchProfiles).where(and(eq(searchProfiles.companyId,company.id),eq(searchProfiles.title,title))); if(!search){[search]=await db.insert(searchProfiles).values({companyId:company.id,title,professionId:profession.id,targetLevel:j===0?"MIDDLE":"SENIOR",minimumExperience:j===0?"FROM_1_TO_3":"FROM_3_TO_5",salaryMinRub:90000, salaryMaxRub:250000,workFormat:company.workFormat,employmentType:"FULL_TIME"}).returning();await db.insert(searchProfileSkills).values([allSkills[(i+j)%allSkills.length],allSkills[(i+j+1)%allSkills.length]].map(skill=>({searchProfileId:search.id,skillId:skill.id})));} }
   }
   for (let i=0;i<4;i++) { const [existing]=await db.select({id:offers.id}).from(offers).where(and(eq(offers.employerUserId,employers[i]),eq(offers.specialistUserId,specialistIds[i]))); if(existing)continue; const [search]=await db.select().from(searchProfiles).innerJoin(companies,eq(companies.id,searchProfiles.companyId)).where(eq(companies.ownerUserId,employers[i])); await createOffer(employers[i],{specialistUserId:specialistIds[i],searchProfileId:search.search_profiles.id,positionTitle:search.search_profiles.title,salaryMinRub:110000,salaryMaxRub:190000,description:"Вымышленное предложение для демонстрации",workFormat:search.search_profiles.workFormat,employmentType:"FULL_TIME",message:"Здравствуйте! Приглашаем вас обсудить сотрудничество."}); }
-  console.log("Seed complete: 20 specialists, 4 companies, 8 search profiles, 4 offers. Demo password in README."); await pool.end();
+  const practiceDirections = ["backend", "frontend", "qa"];
+  for (let i=4;i<17;i++) {
+    await db.update(specialistProfiles).set({ employmentGoal: "PRACTICE", salaryMinRub: null, salaryMaxRub: null, firstName: i===6 ? "Алексей" : firstNames[i], lastName: i===6 ? "Иванов" : lastNames[i],
+      educationalInstitution: i===6 || i%2 ? "РКСИ" : "Технический колледж", educationProgram: "09.02.07 Информационные системы и программирование", studyCourse: 2+i%4,
+      practiceStartDate: "2027-03-01", practiceEndDate: "2027-04-30", desiredDirections: [practiceDirections[i%3]], practiceWorkFormats: i%3===0 ? ["REMOTE"] : ["REMOTE", "HYBRID"],
+    }).where(eq(specialistProfiles.userId, specialistIds[i]));
+  }
+  await db.insert(specialistSkills).values(["Python", "SQL", "Git", "FastAPI", "Docker", "PostgreSQL"].map(name=>({specialistUserId:specialistIds[6],skillId:allSkills.find(skill=>skill.name===name)!.id}))).onConflictDoNothing();
+  for (let i=0;i<3;i++) {
+    const [company] = await db.select().from(companies).where(eq(companies.ownerUserId, employers[i]));
+    const title = `${["Backend", "Frontend", "QA"][i]} / производственная практика`;
+    const [existing] = await db.select({ id: practiceRecruitments.id }).from(practiceRecruitments).where(and(eq(practiceRecruitments.companyId, company.id), eq(practiceRecruitments.title, title)));
+    const requiredNames=i===0?["Python","SQL","Git"]:i===1?["React","TypeScript"]:["Git","SQL"];
+    const optionalNames=i===0?["FastAPI","Docker"]:i===1?["Next.js"]:["Docker"];
+    const requiredSkillIds=requiredNames.map(name=>allSkills.find(x=>x.name===name)!.id);
+    const optionalSkillIds=optionalNames.map(name=>allSkills.find(x=>x.name===name)!.id);
+    if (!existing) await db.insert(practiceRecruitments).values({ employerUserId: employers[i], companyId: company.id, title, description: "Вымышленный набор для демонстрации практики", direction: practiceDirections[i], slotsTotal: 5, practiceStartDate: "2027-03-01", practiceEndDate: "2027-04-30", workFormats: ["REMOTE", "HYBRID"], cityId: company.workFormat === "REMOTE" ? null : allCities[i].id, requiredSkillIds, optionalSkillIds, studyCourseMin: 2, studyCourseMax: 6, officialPracticeSupport: true, status: "ACTIVE" });
+    else { const invitations=await db.select({id:practiceInvitations.id}).from(practiceInvitations).where(eq(practiceInvitations.practiceRecruitmentId,existing.id)); if(invitations.length===0) await db.update(practiceRecruitments).set({requiredSkillIds,optionalSkillIds}).where(eq(practiceRecruitments.id,existing.id)); }
+  }
+  console.log("Seed complete: 20 specialists (13 practice), 4 companies, 3 practice recruitments. Demo password in README."); await pool.end();
 }
 main().catch(error=>{console.error(error);process.exit(1)});

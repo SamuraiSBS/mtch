@@ -154,6 +154,7 @@ legend { color: var(--color-muted); }
 .checkboxes input { width: auto; accent-color: var(--color-accent-hover); }
 .avatar { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
 .muted { color: var(--color-muted); }
+.practice-badge { display: inline-block; padding: 4px 8px; border: 1px solid var(--color-accent-hover); border-radius: 4px; color: var(--color-text); font-size: 12px; font-weight: 800; letter-spacing: .05em; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .card h2 { margin-top: 0; }
 button:disabled { opacity: 0.55; cursor: wait; }

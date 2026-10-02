@@ -16,6 +16,7 @@ export async function candidateFeed(ownerUserId: string, url: string) {
   const minimumExperience = enumFilter("minimumExperience", ["NONE", "UNDER_1", "FROM_1_TO_3", "FROM_3_TO_5", "OVER_5"]);
   const workFormat = enumFilter("workFormat", ["REMOTE", "HYBRID", "OFFICE"]);
   const searchStatus = enumFilter("searchStatus", ["ACTIVE", "OPEN_TO_OFFERS"]);
+  const employmentGoal = enumFilter("employmentGoal", ["JOB", "INTERNSHIP", "PRACTICE", "OPEN_TO_OFFERS"]);
   const professionId = params.get("professionId"), cityId = params.get("cityId"), skillIds = params.getAll("skillId");
   for (const id of [professionId, cityId, ...skillIds].filter(Boolean)) if (!z.uuid().safeParse(id).success) fail(422, "INVALID_FILTER", "Некорректный ID фильтра");
   const salaryMin = params.get("salaryMinRub"), salaryMax = params.get("salaryMaxRub");
@@ -31,13 +32,14 @@ export async function candidateFeed(ownerUserId: string, url: string) {
     if (minimumExperience && (!candidate.experience || experienceRank[candidate.experience] < experienceRank[minimumExperience as keyof typeof experienceRank])) return false;
     if (workFormat && candidate.workFormat !== workFormat) return false;
     if (searchStatus && candidate.searchStatus !== searchStatus) return false;
+    if (employmentGoal && candidate.employmentGoal !== employmentGoal) return false;
     if (skillIds.some(id => !candidate.skills.some(s => s.id === id))) return false;
-    if (min !== null && !(candidate.salaryMinRub <= max! && min <= candidate.salaryMaxRub)) return false;
+    if (min !== null && !(candidate.salaryMinRub !== null && candidate.salaryMaxRub !== null && candidate.salaryMinRub <= max! && min <= candidate.salaryMaxRub)) return false;
     return true;
   });
   const scored = filtered.map(candidate => {
     const score = deterministicScorer.score({ ...search, skillIds: search.skillIds }, { ...candidate, skillIds: candidate.skills.map(x => x.id) } as CandidateCriteria);
-    return { userId: candidate.userId, avatarUrl: `${candidate.avatarUrl}?size=256`, firstName: candidate.firstName, lastName: candidate.lastName, profession: candidate.profession, level: candidate.level, experience: candidate.experience, skills: candidate.skills.slice(0, 6), salaryMinRub: candidate.salaryMinRub, salaryMaxRub: candidate.salaryMaxRub, matchPercent: score };
+    return { userId: candidate.userId, avatarUrl: `${candidate.avatarUrl}?size=256`, firstName: candidate.firstName, lastName: candidate.lastName, profession: candidate.profession, level: candidate.level, experience: candidate.experience, skills: candidate.skills.slice(0, 6), salaryMinRub: candidate.salaryMinRub, salaryMaxRub: candidate.salaryMaxRub, employmentGoal: candidate.employmentGoal, educationalInstitution: candidate.educationalInstitution, studyCourse: candidate.studyCourse, practiceStartDate: candidate.practiceStartDate, practiceEndDate: candidate.practiceEndDate, matchPercent: score };
   }).sort((a, b) => b.matchPercent - a.matchPercent || a.userId.localeCompare(b.userId));
   return paged(scored, page, pageSize);
 }

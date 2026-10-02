@@ -12,6 +12,7 @@ import { deterministicScorer, type CandidateCriteria } from "@/server/matching/s
 export async function createOffer(employerUserId: string, input: unknown) {
   const data = parse(offerInput, input); const company = await ownCompany(employerUserId); const search = await searchDetail(employerUserId, data.searchProfileId);
   const specialist = await specialistDetail(data.specialistUserId);
+  if (specialist.employmentGoal === "PRACTICE") fail(409, "PRACTICE_ONLY", "Этому специалисту можно отправить только приглашение на практику");
   if (specialist.searchStatus === "NOT_LOOKING") fail(409, "SPECIALIST_UNAVAILABLE", "Специалист сейчас не ищет предложения");
   const [existingMatch] = await db.select({ id: matches.id }).from(matches).where(and(eq(matches.employerUserId, employerUserId), eq(matches.specialistUserId, data.specialistUserId)));
   if (existingMatch) fail(409, "MATCH_ALREADY_EXISTS", "Match уже существует");

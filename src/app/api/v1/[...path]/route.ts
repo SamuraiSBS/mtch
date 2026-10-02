@@ -7,12 +7,13 @@ import { listSearchProfiles, removeSearchProfile, saveSearchProfile, searchDetai
 import { candidateFeed } from "@/server/feed/service";
 import { createOffer, listOffers, offerDetail, transitionOffer, listMatches, matchDetail, matchContacts } from "@/server/offers/service";
 import { deleteUnusedMedia, readAvatarOriginal, readMedia, uploadMedia } from "@/server/storage/media";
+import { changePracticeRecruitmentStatus, createPracticeInvitation, listPracticeInvitations, listPracticeRecruitments, practiceContacts, practiceInvitationDetail, practiceMatches, practiceRecruitmentDetail, savePracticeRecruitment, transitionPracticeInvitation } from "@/server/practice/service";
 
 type Context = { params: Promise<{ path: string[] }> };
 async function dispatch(request: Request, context: Context) {
   const parts = (await context.params).path, method = request.method;
   if (method !== "GET") sameOrigin(request);
-  const role = parts[0] === "specialists" && parts[1] === "me" ? "SPECIALIST" : parts[0] === "companies" && parts[1] === "me" ? "EMPLOYER" : parts[0] === "search-profiles" || parts[0] === "feed" ? "EMPLOYER" : parts[0] === "offers" && (parts[1] === "outgoing" || method === "POST" && parts.length === 1) ? "EMPLOYER" : parts[0] === "offers" && parts[1] === "incoming" ? "SPECIALIST" : undefined;
+  const role = parts[0] === "specialists" && parts[1] === "me" ? "SPECIALIST" : parts[0] === "companies" && parts[1] === "me" ? "EMPLOYER" : parts[0] === "search-profiles" || parts[0] === "feed" || parts[0] === "practice-recruitments" ? "EMPLOYER" : parts[0] === "offers" && (parts[1] === "outgoing" || method === "POST" && parts.length === 1) ? "EMPLOYER" : parts[0] === "offers" && parts[1] === "incoming" ? "SPECIALIST" : undefined;
   const user = await requireUser(request, role);
   const input = async () => bodyJson(request);
   const id = (index: number) => { const value = parts[index]; if (!value || !z.uuid().safeParse(value).success) fail(404, "NOT_FOUND", "Ресурс не найден"); return value; };
@@ -50,6 +51,25 @@ async function dispatch(request: Request, context: Context) {
     }
   }
   if (parts[0] === "feed" && parts[1] === "specialists" && parts.length === 2 && method === "GET") return Response.json(await candidateFeed(user.id, request.url));
+  if (parts[0] === "practice-recruitments") {
+    if (parts.length === 1 && method === "GET") return Response.json(await listPracticeRecruitments(user.id, request.url));
+    if (parts.length === 1 && method === "POST") return Response.json(await savePracticeRecruitment(user.id, null, await input()), { status: 201 });
+    if (parts.length >= 2) {
+      const recruitmentId = id(1);
+      if (parts.length === 2 && method === "GET") return Response.json(await practiceRecruitmentDetail(user.id, recruitmentId));
+      if (parts.length === 2 && method === "PUT") return Response.json(await savePracticeRecruitment(user.id, recruitmentId, await input()));
+      if (parts.length === 3 && parts[2] === "status" && method === "POST") { const body = await input(); return Response.json(await changePracticeRecruitmentStatus(user.id, recruitmentId, body && typeof body === "object" ? (body as { status?: unknown }).status : undefined)); }
+      if (parts.length === 3 && parts[2] === "matches" && method === "GET") return Response.json(await practiceMatches(user.id, recruitmentId, request.url));
+      if (parts.length === 3 && parts[2] === "invitations" && method === "GET") return Response.json(await listPracticeInvitations(user.id, "EMPLOYER", request.url, recruitmentId));
+      if (parts.length === 3 && parts[2] === "invitations" && method === "POST") return Response.json(await createPracticeInvitation(user.id, recruitmentId, await input()), { status: 201 });
+    }
+  }
+  if (parts[0] === "practice-invitations") {
+    if (parts.length === 1 && method === "GET") return Response.json(await listPracticeInvitations(user.id, user.role, request.url));
+    if (parts.length === 2 && method === "GET") return Response.json(await practiceInvitationDetail(user.id, id(1)));
+    if (parts.length === 3 && parts[2] === "contacts" && method === "GET") return Response.json(await practiceContacts(user.id, user.role, id(1)));
+    if (parts.length === 3 && method === "POST" && ["view", "accept", "decline", "interview", "hired"].includes(parts[2])) return Response.json(await transitionPracticeInvitation(user.id, user.role, id(1), parts[2] as "view" | "accept" | "decline" | "interview" | "hired"));
+  }
   if (parts[0] === "media") {
     if (parts.length === 1 && method === "POST") {
       const size = Number(request.headers.get("content-length"));
