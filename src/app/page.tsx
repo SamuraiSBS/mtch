@@ -4,7 +4,11 @@ import Link from "next/link";
 export default function Home() {
   return (
     <section className="landing-hero" aria-labelledby="landing-title">
-      <div className="landing-hero__geometry" aria-hidden="true" />
+      <div className="landing-hero__geometry" aria-hidden="true">
+        <svg className="landing-hero__polygon landing-hero__polygon--back" viewBox="0 0 1494 577" preserveAspectRatio="none"><path d="M1494 0V577H0Z" fill="#450000" /></svg>
+        <svg className="landing-hero__polygon landing-hero__polygon--middle" viewBox="0 0 1494 483" preserveAspectRatio="none"><path d="M1494 0V483H0Z" fill="#8c0d22" /></svg>
+        <svg className="landing-hero__polygon landing-hero__polygon--front" viewBox="0 0 1494 377" preserveAspectRatio="none"><path d="M1494 0V377H0Z" fill="#b20e2c" /></svg>
+      </div>
       <div className="landing-hero__content">
         <h1 id="landing-title" className="landing-hero__title">
           <span>работа</span>
