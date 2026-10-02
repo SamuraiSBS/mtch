@@ -12,6 +12,7 @@ type CurrentUser = { role: Role };
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const isAuthPage = pathname === "/login" || pathname === "/register";
   const router = useRouter();
   const [role, setRole] = useState<Role | null>(null);
 
@@ -57,7 +58,7 @@ export function SiteHeader() {
     }
   }
 
-  return <header className="site-header">
+  return <header className={`site-header${isAuthPage ? " site-header--auth" : ""}`}>
     <Link className="site-header__logo" href={logoHref} aria-label={logoLabel} onClick={handleLogoClick}>
       <Image src="/logo-header.png" width={2924} height={924} alt="" priority />
     </Link>
