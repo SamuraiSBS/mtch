@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, send } from "./api";
-import { SpecialistPanel } from "./workspace-specialist";
+import { SpecialistProfileWizard } from "./workspace-specialist-wizard";
 import { CompanyPanel } from "./workspace-company";
 import { SearchPanel, FeedPanel } from "./workspace-search";
 import { OffersPanel, MatchesPanel } from "./workspace-offers";
@@ -89,17 +89,26 @@ export function Workspace({ section }: { section: Section }) {
   const pages = me.role === "SPECIALIST" ? specialistPages : employerPages;
   const title = pages.find((page) => page.section === section)?.label ?? "Кабинет";
   const profileSaved = me.role !== "SPECIALIST" || me.hasProfile;
+  const specialistProfile = section === "profile" && me.role === "SPECIALIST";
 
-  return <div className="workspace">
-    <div className="workspace-heading">
+  return <div className={specialistProfile ? "workspace workspace--profile" : "workspace"}>
+    {!specialistProfile && <div className="workspace-heading">
       <div><h1>{title}</h1><p>{me.email}</p></div>
       <button className="secondary" onClick={async () => { await send("/auth/logout", "POST"); router.replace("/"); }}>Выйти</button>
-    </div>
-    {profileSaved && <nav className="workspace-nav" aria-label="Разделы кабинета">
+    </div>}
+    {!specialistProfile && profileSaved && <nav className="workspace-nav" aria-label="Разделы кабинета">
       {pages.map((page) => <Link key={page.section} className={section === page.section ? "workspace-nav__link active" : "workspace-nav__link"} aria-current={section === page.section ? "page" : undefined} href={page.href}>{page.label}</Link>)}
     </nav>}
     {(profileSaved || section === "profile") && <>
-      {section === "profile" && me.role === "SPECIALIST" && <SpecialistPanel catalogs={catalogs} onSaved={() => setMe((old) => old ? { ...old, hasProfile: true } : old)} />}
+      {specialistProfile && <SpecialistProfileWizard
+        catalogs={catalogs}
+        userId={me.id}
+        onSaved={() => {
+          setMe((old) => old ? { ...old, hasProfile: true } : old);
+          router.replace("/offers");
+        }}
+        onLogout={async () => { await send("/auth/logout", "POST"); router.replace("/"); }}
+      />}
       {section === "practice-invitations" && me.role === "SPECIALIST" && <SpecialistPracticePanel />}
       {section === "company" && me.role === "EMPLOYER" && <CompanyPanel />}
       {section === "search" && me.role === "EMPLOYER" && <SearchPanel catalogs={catalogs} />}
