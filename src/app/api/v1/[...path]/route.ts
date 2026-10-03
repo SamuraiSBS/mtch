@@ -73,7 +73,7 @@ async function dispatch(request: Request, context: Context) {
   if (parts[0] === "media") {
     if (parts.length === 1 && method === "POST") {
       const size = Number(request.headers.get("content-length"));
-      if (size > 6 * 1024 * 1024) fail(413, "FILE_TOO_LARGE", "Файл больше 5 МБ");
+      if (size > 11 * 1024 * 1024) fail(413, "FILE_TOO_LARGE", "Файл больше допустимого размера");
       return Response.json(await uploadMedia(user.id, user.role, await request.formData()), { status: 201 });
     }
     if (parts.length === 2 && method === "GET") return readMedia(user.id, id(1), request.url);

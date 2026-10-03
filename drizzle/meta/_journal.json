@@ -36,6 +36,20 @@
       "when": 1790972266535,
       "tag": "0004_bright_screwball",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791040216089,
+      "tag": "0005_executor_profile_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791041364683,
+      "tag": "0006_expand_catalogs",
+      "breakpoints": true
     }
   ]
 }

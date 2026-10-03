@@ -12,7 +12,7 @@ export const employmentGoalEnum = pgEnum("employment_goal", ["JOB", "INTERNSHIP"
 export const practiceStatusEnum = pgEnum("practice_status", ["DRAFT", "ACTIVE", "COMPLETED", "ARCHIVED"]);
 export const practiceInvitationStatusEnum = pgEnum("practice_invitation_status", ["SENT", "VIEWED", "ACCEPTED", "DECLINED", "INTERVIEW", "HIRED"]);
 export const offerStatusEnum = pgEnum("offer_status", ["SENT", "ACCEPTED", "REJECTED", "WITHDRAWN"]);
-export const mediaKindEnum = pgEnum("media_kind", ["AVATAR", "COMPANY_LOGO", "COMPANY_PHOTO"]);
+export const mediaKindEnum = pgEnum("media_kind", ["AVATAR", "COMPANY_LOGO", "COMPANY_PHOTO", "RESUME"]);
 export const socialPlatformEnum = pgEnum("social_platform", ["TELEGRAM", "VK", "LINKEDIN", "YOUTUBE", "INSTAGRAM", "TIKTOK", "X", "OTHER"]);
 export const companyPhotoCategoryEnum = pgEnum("company_photo_category", ["OFFICE", "TEAM", "WORKSPACE", "PROCESSES", "OTHER"]);
 export const sizeBandEnum = pgEnum("size_band", ["1-10", "11-50", "51-200", "201-1000", "1000+"]);
@@ -57,7 +57,7 @@ export const avatarAssets = pgTable("avatar_assets", {
 });
 export const specialistProfiles = pgTable("specialist_profiles", {
   userId: text("user_id").primaryKey().references(() => user.id), firstName: varchar("first_name", { length: 100 }).notNull(), lastName: varchar("last_name", { length: 100 }).notNull(),
-  birthDate: date("birth_date"), cityId: uuid("city_id").references(() => cities.id), avatarFileId: uuid("avatar_file_id").notNull().references(() => mediaFiles.id),
+  birthDate: date("birth_date"), age: integer("age"), cityId: uuid("city_id").references(() => cities.id), avatarFileId: uuid("avatar_file_id").notNull().references(() => mediaFiles.id),
   professionId: uuid("profession_id").notNull().references(() => professions.id), experience: experienceEnum("experience"), level: levelEnum("level"), cooperationType: cooperationEnum("cooperation_type"),
   about: varchar("about", { length: 500 }), portfolioUrl: text("portfolio_url"), githubUrl: text("github_url"), behanceGitlabUrl: text("behance_gitlab_url"), telegram: text("telegram"),
   resumeFileId: uuid("resume_file_id"), salaryMinRub: integer("salary_min_rub"), salaryMaxRub: integer("salary_max_rub"),

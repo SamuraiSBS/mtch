@@ -13,18 +13,21 @@ const practiceFields = {
   desiredDirections: z.array(z.enum(directions)).min(1).max(3).nullable().optional(), practiceWorkFormats: z.array(z.enum(workFormats)).min(1).nullable().optional(),
 };
 export const specialistInput = z.object({
-  firstName: z.string().trim().min(1).max(100), lastName: z.string().trim().min(1).max(100), birthDate: z.iso.date().nullable().optional(), cityId: z.uuid().nullable().optional(), avatarFileId: z.uuid(), professionId: z.uuid(),
+  firstName: z.string().trim().min(1).max(100), lastName: z.string().trim().min(1).max(100), birthDate: z.iso.date().nullable().optional(), age: z.number().int().min(1).max(120).nullable().optional(), cityId: z.uuid().nullable().optional(), cityName: z.union([z.string().trim().min(1).max(120), z.literal(""), z.null()]).optional().transform(v => v || null), avatarFileId: z.uuid(), professionId: z.uuid(),
   experience: z.enum(["NONE", "UNDER_1", "FROM_1_TO_3", "FROM_3_TO_5", "OVER_5"]).nullable().optional(), level: z.enum(["INTERN", "JUNIOR", "MIDDLE", "SENIOR"]).nullable().optional(), cooperationType: z.enum(["STAFF", "PROJECT", "FREELANCE", "INTERNSHIP"]).nullable().optional(),
-  skillIds: z.array(z.uuid()).min(1), about: optionalText(500), portfolioUrl: optionalUrl, githubUrl: optionalUrl, behanceGitlabUrl: optionalUrl, telegram: optionalText(100),
+  skillIds: z.array(z.uuid()).max(40).default([]), customSkills: z.array(z.string().trim().min(1).max(80)).max(20).default([]), about: optionalText(500), portfolioUrl: optionalUrl, githubUrl: optionalUrl, behanceGitlabUrl: optionalUrl, telegram: optionalText(100), resumeFileId: z.uuid().nullable().optional(),
   salaryMinRub: z.number().int().positive().nullable(), salaryMaxRub: z.number().int().positive().nullable(), workFormat: z.enum(workFormats).nullable().optional(), employmentType: z.enum(["FULL_TIME", "PART_TIME", "PROJECT", "INTERNSHIP"]).nullable().optional(), searchStatus: z.enum(["ACTIVE", "OPEN_TO_OFFERS", "NOT_LOOKING"]).default("OPEN_TO_OFFERS"),
   employmentGoal: z.enum(["JOB", "INTERNSHIP", "PRACTICE", "OPEN_TO_OFFERS"]).default("OPEN_TO_OFFERS"), ...practiceFields,
 }).superRefine((x, ctx) => {
   const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
+  if (x.skillIds.length + x.customSkills.length === 0) issue("skillIds", "Добавьте хотя бы один навык");
+  const normalizedCustomSkills = x.customSkills.map(name => name.normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("ru-RU"));
+  if (new Set(normalizedCustomSkills).size !== normalizedCustomSkills.length) issue("customSkills", "Навыки не должны повторяться");
   if (x.employmentGoal === "PRACTICE") {
     if (x.salaryMinRub !== null || x.salaryMaxRub !== null) issue("salaryMinRub", "Для практики зарплата не указывается");
     for (const key of ["educationalInstitution", "educationProgram", "studyCourse", "practiceStartDate", "practiceEndDate", "desiredDirections", "practiceWorkFormats"] as const) if (!x[key] || Array.isArray(x[key]) && x[key].length === 0) issue(key, "Поле обязательно для практики");
     if (x.practiceStartDate && x.practiceEndDate && x.practiceEndDate <= x.practiceStartDate) issue("practiceEndDate", "Дата окончания должна быть позже начала");
-    if (x.practiceWorkFormats?.some(v => v !== "REMOTE") && !x.cityId) issue("cityId", "Для офиса или гибрида укажите город");
+    if (x.practiceWorkFormats?.some(v => v !== "REMOTE") && !x.cityId && !x.cityName) issue("cityId", "Для офиса или гибрида укажите город");
     if (x.desiredDirections && new Set(x.desiredDirections).size !== x.desiredDirections.length) issue("desiredDirections", "Направления не должны повторяться");
     if (x.practiceWorkFormats && new Set(x.practiceWorkFormats).size !== x.practiceWorkFormats.length) issue("practiceWorkFormats", "Форматы не должны повторяться");
   } else if (!x.salaryMinRub || !x.salaryMaxRub || x.salaryMaxRub < x.salaryMinRub) issue("salaryMaxRub", "Укажите корректный диапазон зарплаты");

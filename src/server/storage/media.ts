@@ -31,11 +31,24 @@ async function saveAvatar(userId: string, original: Uint8Array, originalMimeType
 
 export async function uploadMedia(userId: string, role: "SPECIALIST" | "EMPLOYER", form: FormData) {
   const kind = form.get("kind"), file = form.get("file");
-  if (kind !== "AVATAR" && kind !== "COMPANY_LOGO" && kind !== "COMPANY_PHOTO") return fail(422, "INVALID_MEDIA_KIND", "Некорректный тип файла");
-  if (role === "SPECIALIST" ? kind !== "AVATAR" : kind === "AVATAR") return fail(403, "FORBIDDEN", "Недоступный тип файла");
+  if (kind !== "AVATAR" && kind !== "COMPANY_LOGO" && kind !== "COMPANY_PHOTO" && kind !== "RESUME") return fail(422, "INVALID_MEDIA_KIND", "Некорректный тип файла");
+  if (role === "SPECIALIST" ? kind !== "AVATAR" && kind !== "RESUME" : kind === "AVATAR" || kind === "RESUME") return fail(403, "FORBIDDEN", "Недоступный тип файла");
   if (!(file instanceof File)) return fail(422, "FILE_REQUIRED", "Выберите файл");
-  if (file.size > 5 * 1024 * 1024) return fail(413, "FILE_TOO_LARGE", "Файл больше 5 МБ");
-  const bytes = new Uint8Array(await file.arrayBuffer()), mime = detectedMime(bytes);
+  const maxSize = kind === "RESUME" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+  if (file.size > maxSize) return fail(413, "FILE_TOO_LARGE", kind === "RESUME" ? "Резюме больше 10 МБ" : "Файл больше 5 МБ");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (kind === "RESUME") {
+    const isPdf = bytes.length > 5 && String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-";
+    if (!isPdf || file.type !== "application/pdf") return fail(415, "UNSUPPORTED_MEDIA", "Загрузите файл в формате PDF");
+    try { await cleanupStagedResumes(); }
+    catch (error) { console.error("resume cleanup failed", error); }
+    const storageKey = await localFileStorage.save(bytes);
+    try {
+      const [record] = await db.insert(mediaFiles).values({ ownerUserId: userId, kind, storageKey, mimeType: "application/pdf", byteSize: bytes.length }).returning();
+      return { fileId: record.id };
+    } catch (error) { await localFileStorage.remove(storageKey); throw error; }
+  }
+  const mime = detectedMime(bytes);
   if (!mime || mime !== file.type) return fail(415, "UNSUPPORTED_MEDIA", "Допускаются PNG, JPEG и WebP");
   if (kind === "AVATAR") {
     try { await cleanupStagedAvatars(); }
@@ -56,6 +69,12 @@ async function mediaUsage(fileId: string) {
   return Boolean(specialist || company || photo);
 }
 
+async function resumeInUse(fileId: string) {
+  const [specialist] = await db.select({ id: specialistProfiles.userId }).from(specialistProfiles)
+    .where(eq(specialistProfiles.resumeFileId, fileId));
+  return Boolean(specialist);
+}
+
 export async function readMedia(userId: string, fileId: string, url?: string) {
   const [file] = await db.select().from(mediaFiles).where(eq(mediaFiles.id, fileId));
   if (!file) fail(404, "MEDIA_NOT_FOUND", "Файл не найден");
@@ -68,7 +87,9 @@ export async function readMedia(userId: string, fileId: string, url?: string) {
   if (assets && size === "256") key = assets.mediumStorageKey;
   if (assets && size === "64") key = assets.smallStorageKey;
   const bytes = await localFileStorage.read(key);
-  return new Response(Buffer.from(bytes), { headers: { "Content-Type": file.mimeType, "Content-Length": String(bytes.length), "X-Content-Type-Options": "nosniff", "Cache-Control": published ? "private, max-age=3600" : "private, no-store" } });
+  const headers = new Headers({ "Content-Type": file.mimeType, "Content-Length": String(bytes.length), "X-Content-Type-Options": "nosniff", "Cache-Control": published ? "private, max-age=3600" : "private, no-store" });
+  if (file.kind === "RESUME") headers.set("Content-Disposition", "attachment; filename=resume.pdf");
+  return new Response(Buffer.from(bytes), { headers });
 }
 
 export async function readAvatarOriginal(userId: string, fileId: string) {
@@ -83,7 +104,7 @@ export async function readAvatarOriginal(userId: string, fileId: string) {
 export async function deleteUnusedMedia(userId: string, fileId: string) {
   const [file] = await db.select().from(mediaFiles).where(eq(mediaFiles.id, fileId));
   if (!file || file.ownerUserId !== userId) fail(404, "MEDIA_NOT_FOUND", "Файл не найден");
-  if (await mediaUsage(fileId)) fail(409, "MEDIA_IN_USE", "Файл используется");
+  if (await mediaUsage(fileId) || await resumeInUse(fileId)) fail(409, "MEDIA_IN_USE", "Файл используется");
   const [assets] = file.kind === "AVATAR" ? await db.select().from(avatarAssets).where(eq(avatarAssets.fileId, fileId)) : [];
   const keys = [file.storageKey, ...(assets ? [assets.originalStorageKey, assets.mediumStorageKey, assets.smallStorageKey] : [])];
   await Promise.all(keys.map(key => localFileStorage.remove(key)));
@@ -98,5 +119,15 @@ export async function cleanupStagedAvatars() {
     if (await mediaUsage(file.id)) continue;
     try { await deleteUnusedMedia(file.ownerUserId, file.id); }
     catch (error) { console.error("avatar cleanup failed", { fileId: file.id, error }); }
+  }
+}
+
+export async function cleanupStagedResumes() {
+  const expired = await db.select({ id: mediaFiles.id, ownerUserId: mediaFiles.ownerUserId }).from(mediaFiles)
+    .where(and(eq(mediaFiles.kind, "RESUME"), lt(mediaFiles.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000)))).limit(50);
+  for (const file of expired) {
+    if (await resumeInUse(file.id)) continue;
+    try { await deleteUnusedMedia(file.ownerUserId, file.id); }
+    catch (error) { console.error("resume cleanup failed", { fileId: file.id, error }); }
   }
 }
