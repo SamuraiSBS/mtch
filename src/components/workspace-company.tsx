@@ -28,7 +28,7 @@ type CompanyDraft = {
   photos: CompanyPhotoDraft[];
 };
 type WizardErrors = Record<string, string>;
-type Props = { userId: string; email: string; onSaved: () => void; onLogout: () => void };
+type Props = { userId: string; email: string; onSaved: () => void; onLogout: () => void; onCancel?: () => void };
 
 const STEP_TITLES = ["Основное", "Информация о компании", "Контакты и соцсети", "Фотографии"];
 const SOCIAL_PLATFORMS: [SocialPlatform, string][] = [
@@ -214,7 +214,7 @@ function SelectField({
   </label>;
 }
 
-function CompanyPanel({ userId, email, onSaved, onLogout }: Props) {
+function CompanyPanel({ userId, email, onSaved, onLogout, onCancel }: Props) {
   const key = useMemo(() => draftKey(userId), [userId]);
   const [form, setForm] = useState<CompanyDraft>(EMPTY_DRAFT);
   const [step, setStep] = useState(1);
@@ -471,7 +471,7 @@ function CompanyPanel({ userId, email, onSaved, onLogout }: Props) {
               <span style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
-          <div className="company-wizard__account"><span>{email}</span><button type="button" className="profile-wizard__logout" onClick={onLogout} disabled={isBusy}>Выйти</button></div>
+          <div className="company-wizard__account"><span>{email}</span>{onCancel && <button type="button" className="profile-wizard__logout" onClick={onCancel} disabled={isBusy}>Назад к профилю</button>}<button type="button" className="profile-wizard__logout" onClick={onLogout} disabled={isBusy}>Выйти</button></div>
         </div>
         <div className="profile-wizard__heading">
           <h1>{currentTitle}</h1>

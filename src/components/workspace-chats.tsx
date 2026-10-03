@@ -3,18 +3,20 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Heart, MessageCircle, Send } from "lucide-react";
+import { Clock3, Heart, MessageCircle, SendHorizontal } from "lucide-react";
 import { api, send } from "./api";
 import { UiIcon } from "./ui-icon";
 
 type ChatMessage = { id: string; matchId: string; senderUserId: string; body: string; createdAt: string };
 type ChatThread = {
   id: string;
+  offerId?: string;
   companyId: string;
   name: string;
   subtitle: string;
   avatarFileId: string;
   isFavorite: boolean;
+  status?: "ACTIVE" | "WAITING";
   acceptedAt: string;
   lastMessage: Pick<ChatMessage, "body" | "senderUserId" | "createdAt"> | null;
 };
@@ -53,8 +55,8 @@ export function ChatPanel({ role, userId }: { role: "SPECIALIST" | "EMPLOYER"; u
         if (!active) return;
         setThreads(result.items);
         setError("");
-        setSelectedId((current) => current && result.items.some((thread) => thread.id === current)
-          ? current
+        setSelectedId((current) => current && result.items.some((thread) => thread.id === current || thread.offerId === current)
+          ? result.items.find((thread) => thread.id === current || thread.offerId === current)!.id
           : requestedId && result.items.some((thread) => thread.id === requestedId)
             ? requestedId
             : result.items[0]?.id ?? "");
@@ -67,7 +69,7 @@ export function ChatPanel({ role, userId }: { role: "SPECIALIST" | "EMPLOYER"; u
   }, [requestedId]);
 
   useEffect(() => {
-    if (!selectedId) { setMessages([]); return; }
+    if (!selectedId || selected?.status === "WAITING") { setMessages([]); return; }
     let active = true;
     const load = async () => {
       try {
@@ -78,7 +80,7 @@ export function ChatPanel({ role, userId }: { role: "SPECIALIST" | "EMPLOYER"; u
     void load();
     const timer = window.setInterval(() => { void load(); }, 4000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [selectedId]);
+  }, [selectedId, selected?.status]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, selectedId]);
 
@@ -94,7 +96,7 @@ export function ChatPanel({ role, userId }: { role: "SPECIALIST" | "EMPLOYER"; u
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const body = draft.trim();
-    if (!selected || !body || sending) return;
+    if (!selected || selected.status === "WAITING" || !body || sending) return;
     setSending(true);
     setError("");
     try {
@@ -116,7 +118,7 @@ export function ChatPanel({ role, userId }: { role: "SPECIALIST" | "EMPLOYER"; u
         {!loading && threads.length === 0 && <div className="chat-list__empty"><UiIcon icon={MessageCircle} size={22} /><p>Принятые предложения появятся здесь.</p></div>}
         {threads.map((thread) => <button type="button" key={thread.id} className={thread.id === selectedId ? "chat-list__item is-active" : "chat-list__item"} onClick={() => setSelectedId(thread.id)}>
           <span className="chat-list__avatar">{thread.avatarFileId ? <Image src={`/api/v1/media/${thread.avatarFileId}?size=64`} width={56} height={56} unoptimized alt="" /> : <span>{thread.name.slice(0, 1).toUpperCase()}</span>}</span>
-          <span className="chat-list__copy"><strong>{thread.name}{role === "SPECIALIST" && thread.isFavorite && <UiIcon icon={Heart} size={13} className="chat-list__heart" />}</strong><small>{thread.subtitle}</small><span>{thread.lastMessage?.body ?? "Предложение принято — можно начать диалог"}</span></span>
+          <span className="chat-list__copy"><strong>{thread.name}{role === "SPECIALIST" && thread.isFavorite && <UiIcon icon={Heart} size={13} className="chat-list__heart" />}</strong><small>{thread.status === "WAITING" ? "Ожидаем подтверждения исполнителя" : thread.subtitle}</small><span>{thread.lastMessage?.body ?? (thread.status === "WAITING" ? "Заявка отправлена · чат пока закрыт" : "Предложение принято — можно начать диалог")}</span></span>
           <time>{thread.lastMessage ? timeLabel(thread.lastMessage.createdAt) : dateLabel(thread.acceptedAt)}</time>
         </button>)}
       </aside>
@@ -124,21 +126,23 @@ export function ChatPanel({ role, userId }: { role: "SPECIALIST" | "EMPLOYER"; u
       {selected && <div className="chat-conversation">
         <header className="chat-conversation__header">
           <span className="chat-conversation__avatar">{selected.avatarFileId ? <Image src={`/api/v1/media/${selected.avatarFileId}?size=64`} width={48} height={48} unoptimized alt="" /> : selected.name.slice(0, 1).toUpperCase()}</span>
-          <div><h2>{selected.name}</h2><p>{selected.subtitle}</p></div>
+          <div><h2>{selected.name}</h2><p>{selected.status === "WAITING" ? "Ожидаем подтверждения исполнителя" : selected.subtitle}</p></div>
           {role === "SPECIALIST" && <button type="button" className={selected.isFavorite ? "chat-conversation__favorite is-active" : "chat-conversation__favorite"} aria-pressed={selected.isFavorite} aria-label={selected.isFavorite ? "Убрать работодателя из избранного" : "Добавить работодателя в избранное"} onClick={() => void toggleFavorite(selected)}><UiIcon icon={Heart} size={20} /></button>}
         </header>
-        <div className="chat-conversation__messages" aria-live="polite">
-          <div className="chat-conversation__date">Чат открыт {dateLabel(selected.acceptedAt)}</div>
-          {messages.map((message) => <article className={message.senderUserId === userId ? "chat-message is-own" : "chat-message"} key={message.id}>
-            <p>{message.body}</p><time>{timeLabel(message.createdAt)}</time>
-          </article>)}
-          {messages.length === 0 && <p className="chat-conversation__welcome">Предложение принято. Напишите работодателю, чтобы обсудить детали.</p>}
+        <div className={selected.status === "WAITING" ? "chat-conversation__messages chat-conversation__messages--waiting" : "chat-conversation__messages"} aria-live="polite">
+          {selected.status === "WAITING" ? <div className="chat-conversation__waiting" role="status"><span><UiIcon icon={Clock3} size={22} /></span><div><strong>Заявка отправлена. Ожидайте ответа.</strong><p>Исполнитель ещё не подтвердил интерес. Чат откроется после его согласия.</p></div></div> : <>
+            <div className="chat-conversation__date">Чат открыт {dateLabel(selected.acceptedAt)}</div>
+            {messages.map((message) => <article className={message.senderUserId === userId ? "chat-message is-own" : "chat-message"} key={message.id}>
+              <p>{message.body}</p><time>{timeLabel(message.createdAt)}</time>
+            </article>)}
+            {messages.length === 0 && <p className="chat-conversation__welcome">Предложение принято. Напишите собеседнику, чтобы обсудить детали.</p>}
+          </>}
           <div ref={bottomRef} />
         </div>
-        <form className="chat-composer" onSubmit={sendMessage}>
+        {selected.status !== "WAITING" && <form className="chat-composer" onSubmit={sendMessage}>
           <textarea value={draft} maxLength={3000} rows={1} aria-label="Сообщение" placeholder="Напишите сообщение…" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
-          <button type="submit" aria-label="Отправить сообщение" disabled={!draft.trim() || sending}><UiIcon icon={Send} size={18} /></button>
-        </form>
+          <button type="submit" aria-label="Отправить сообщение" disabled={!draft.trim() || sending}><UiIcon icon={SendHorizontal} size={20} /></button>
+        </form>}
       </div>}
     </div>
   </section>;

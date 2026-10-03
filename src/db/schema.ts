@@ -97,6 +97,11 @@ export const specialistFavorites = pgTable("specialist_favorites", {
   companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, t => [primaryKey({ columns: [t.specialistUserId, t.companyId] }), index("specialist_favorites_company_idx").on(t.companyId, t.createdAt)]);
+export const employerSpecialistFavorites = pgTable("employer_specialist_favorites", {
+  employerUserId: text("employer_user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  specialistUserId: text("specialist_user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.employerUserId, t.specialistUserId] }), index("employer_specialist_favorites_candidate_idx").on(t.specialistUserId, t.createdAt)]);
 export const matchMessages = pgTable("match_messages", {
   id: uuid("id").primaryKey().defaultRandom(),
   matchId: uuid("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),

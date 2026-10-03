@@ -57,6 +57,13 @@
       "when": 1791042452193,
       "tag": "0007_specialist_dashboard",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791045957000,
+      "tag": "0008_employer_specialist_favorites",
+      "breakpoints": true
     }
   ]
 }

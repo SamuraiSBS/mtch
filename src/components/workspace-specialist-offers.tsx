@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, Building2, BriefcaseBusiness, Heart, Wallet } from "lucide-react";
 import { api, send } from "./api";
@@ -93,7 +94,7 @@ export function SpecialistOffersPanel({ onAccepted }: { onAccepted: (matchId: st
   return <section className="specialist-content" aria-label="Предложения работодателей">
     <header className="specialist-content__heading">
       <div><h1>Кто заинтересовался вами?</h1><p>Работодатели, которым понравился ваш профиль</p></div>
-      <span className="specialist-content__count">{offerCount(offers.length)}</span>
+      <div className="specialist-offer-heading__actions"><Link href="/practice-invitations" className="specialist-practice-link">Приглашения на практику <ArrowRight size={15} /></Link><span className="specialist-content__count">{offerCount(offers.length)}</span></div>
     </header>
     {error && <p className="specialist-dashboard__error" role="alert">{error}</p>}
     {loading && <p className="specialist-dashboard__empty" role="status">Загружаем предложения…</p>}
