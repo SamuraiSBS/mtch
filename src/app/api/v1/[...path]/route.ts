@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { bodyJson, fail, jsonError, requireUser, sameOrigin } from "@/server/http";
+import { parse } from "@/server/validation";
 import { listCatalog } from "@/server/catalogs/service";
 import { specialistDetail, saveSpecialist } from "@/server/specialists/service";
 import { addCompanyPhoto, addSocialLink, companyDetail, ownCompany, removeCompanyPhoto, removeSocialLink, saveCompany } from "@/server/companies/service";
@@ -8,12 +9,14 @@ import { candidateFeed } from "@/server/feed/service";
 import { createOffer, listOffers, offerDetail, transitionOffer, listMatches, matchDetail, matchContacts } from "@/server/offers/service";
 import { deleteUnusedMedia, readAvatarOriginal, readMedia, uploadMedia } from "@/server/storage/media";
 import { changePracticeRecruitmentStatus, createPracticeInvitation, listPracticeInvitations, listPracticeRecruitments, practiceContacts, practiceInvitationDetail, practiceMatches, practiceRecruitmentDetail, savePracticeRecruitment, transitionPracticeInvitation } from "@/server/practice/service";
+import { addSpecialistFavorite, listSpecialistFavorites, removeSpecialistFavorite } from "@/server/favorites/service";
+import { createChatMessage, listChatMessages, listChatThreads } from "@/server/chats/service";
 
 type Context = { params: Promise<{ path: string[] }> };
 async function dispatch(request: Request, context: Context) {
   const parts = (await context.params).path, method = request.method;
   if (method !== "GET") sameOrigin(request);
-  const role = parts[0] === "specialists" && parts[1] === "me" ? "SPECIALIST" : parts[0] === "companies" && parts[1] === "me" ? "EMPLOYER" : parts[0] === "search-profiles" || parts[0] === "feed" || parts[0] === "practice-recruitments" ? "EMPLOYER" : parts[0] === "offers" && (parts[1] === "outgoing" || method === "POST" && parts.length === 1) ? "EMPLOYER" : parts[0] === "offers" && parts[1] === "incoming" ? "SPECIALIST" : undefined;
+  const role = parts[0] === "favorites" ? "SPECIALIST" : parts[0] === "specialists" && parts[1] === "me" ? "SPECIALIST" : parts[0] === "companies" && parts[1] === "me" ? "EMPLOYER" : parts[0] === "search-profiles" || parts[0] === "feed" || parts[0] === "practice-recruitments" ? "EMPLOYER" : parts[0] === "offers" && (parts[1] === "outgoing" || method === "POST" && parts.length === 1) ? "EMPLOYER" : parts[0] === "offers" && parts[1] === "incoming" ? "SPECIALIST" : undefined;
   const user = await requireUser(request, role);
   const input = async () => bodyJson(request);
   const id = (index: number) => { const value = parts[index]; if (!value || !z.uuid().safeParse(value).success) fail(404, "NOT_FOUND", "Ресурс не найден"); return value; };
@@ -23,7 +26,7 @@ async function dispatch(request: Request, context: Context) {
       if (method === "GET") return Response.json(await specialistDetail(user.id, true));
       if (method === "POST" || method === "PUT") return Response.json(await saveSpecialist(user.id, await input(), method === "POST"), { status: method === "POST" ? 201 : 200 });
     }
-    if (method === "GET" && parts.length === 2) return Response.json(await specialistDetail(id(1), user.id === parts[1]));
+    if (method === "GET" && parts.length === 2) return Response.json(await specialistDetail(id(1), user.id === parts[1], user.role === "EMPLOYER"));
   }
   if (parts[0] === "companies") {
     if (parts[1] === "me") {
@@ -79,6 +82,22 @@ async function dispatch(request: Request, context: Context) {
     if (parts.length === 2 && method === "GET") return readMedia(user.id, id(1), request.url);
     if (parts.length === 3 && parts[2] === "original" && method === "GET") return readAvatarOriginal(user.id, id(1));
     if (parts.length === 2 && method === "DELETE") { await deleteUnusedMedia(user.id, id(1)); return new Response(null, { status: 204 }); }
+  }
+  if (parts[0] === "favorites") {
+    if (parts.length === 1 && method === "GET") return Response.json(await listSpecialistFavorites(user.id));
+    if (parts.length === 1 && method === "POST") {
+      const data = parse(z.object({ companyId: z.uuid() }), await input());
+      return Response.json(await addSpecialistFavorite(user.id, data.companyId), { status: 201 });
+    }
+    if (parts.length === 2 && method === "DELETE") { await removeSpecialistFavorite(user.id, id(1)); return new Response(null, { status: 204 }); }
+  }
+  if (parts[0] === "chats") {
+    if (parts.length === 1 && method === "GET") return Response.json(await listChatThreads(user.id, user.role));
+    if (parts.length === 3 && parts[2] === "messages") {
+      const matchId = id(1);
+      if (method === "GET") return Response.json(await listChatMessages(user.id, matchId));
+      if (method === "POST") return Response.json(await createChatMessage(user.id, matchId, await input()), { status: 201 });
+    }
   }
   if (parts[0] === "offers") {
     if (parts.length === 1 && method === "POST") return Response.json(await createOffer(user.id, await input()), { status: 201 });

@@ -6,13 +6,13 @@ import { specialistInput, parse } from "@/server/validation";
 import { requireCatalogId, requireSkills, resolveOrCreateCity, resolveOrCreateSkills } from "@/server/catalogs/service";
 import { deleteUnusedMedia } from "@/server/storage/media";
 
-export async function specialistDetail(userId: string, own = false) {
+export async function specialistDetail(userId: string, own = false, employerView = false) {
   const [row] = await db.select({ profile: specialistProfiles, profession: professions.name, city: cities.name, email: user.email }).from(specialistProfiles).innerJoin(professions, eq(professions.id, specialistProfiles.professionId)).leftJoin(cities, eq(cities.id, specialistProfiles.cityId)).innerJoin(user, eq(user.id, specialistProfiles.userId)).where(eq(specialistProfiles.userId, userId));
   if (!row) fail(404, "SPECIALIST_NOT_FOUND", "Профиль не найден");
   const chosenSkills = await db.select({ id: skills.id, name: skills.name }).from(specialistSkills).innerJoin(skills, eq(skills.id, specialistSkills.skillId)).where(eq(specialistSkills.specialistUserId, userId));
   const { telegram, birthDate, resumeFileId, ...publicProfile } = row.profile;
   const calculatedAge = birthDate ? Math.max(0, new Date().getFullYear() - new Date(birthDate).getFullYear() - (new Date().toISOString().slice(5, 10) < birthDate.slice(5, 10) ? 1 : 0)) : null;
-  return { ...publicProfile, profession: row.profession, city: row.city, age: row.profile.age ?? calculatedAge, skills: chosenSkills, avatarUrl: `/api/v1/media/${row.profile.avatarFileId}`, resume: resumeFileId ? "ATTACHED" : null, ...(own ? { telegram, birthDate, resumeFileId, email: row.email } : {}) };
+  return { ...publicProfile, profession: row.profession, city: row.city, age: row.profile.age ?? calculatedAge, skills: chosenSkills, avatarUrl: `/api/v1/media/${row.profile.avatarFileId}`, resume: resumeFileId ? "ATTACHED" : null, ...((own || employerView) ? { telegram } : {}), ...(own ? { birthDate, resumeFileId, email: row.email } : {}) };
 }
 export async function saveSpecialist(userId: string, input: unknown, create: boolean) {
   const data = parse(specialistInput, input);

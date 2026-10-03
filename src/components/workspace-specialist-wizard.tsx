@@ -634,11 +634,13 @@ export function SpecialistProfileWizard({
   catalogs,
   userId,
   onSaved,
+  onCancel,
   onLogout,
 }: {
   catalogs: Catalogs;
   userId: string;
   onSaved?: () => void;
+  onCancel?: () => void;
   onLogout?: () => void;
 }) {
   const [form, setForm] = useState<SpecialistDraft>(EMPTY_DRAFT);
@@ -893,7 +895,10 @@ export function SpecialistProfileWizard({
               <span style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
-          {onLogout && <button type="button" className="profile-wizard__logout" onClick={onLogout}>Выйти</button>}
+          <div className="profile-wizard__top-actions">
+            {onCancel && <button type="button" className="profile-wizard__logout" onClick={onCancel}>Отменить</button>}
+            {onLogout && <button type="button" className="profile-wizard__logout" onClick={onLogout}>Выйти</button>}
+          </div>
         </div>
         <div className="profile-wizard__heading">
           <h1>{currentTitle}</h1>

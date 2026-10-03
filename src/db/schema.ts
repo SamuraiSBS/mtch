@@ -92,6 +92,18 @@ export const offers = pgTable("offers", {
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(), resolvedAt: timestamp("resolved_at", { withTimezone: true }), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, t => [uniqueIndex("offers_active_pair_unique").on(t.employerUserId, t.specialistUserId).where(sql`${t.status} in ('SENT', 'ACCEPTED')`), index("offers_incoming_idx").on(t.specialistUserId, t.sentAt), index("offers_outgoing_idx").on(t.companyId, t.sentAt), index("offers_search_idx").on(t.searchProfileId), check("offer_salary_check", sql`${t.salaryMinRub} > 0 and ${t.salaryMaxRub} >= ${t.salaryMinRub}`)]);
 export const matches = pgTable("matches", { id: uuid("id").primaryKey().defaultRandom(), offerId: uuid("offer_id").notNull().unique().references(() => offers.id), employerUserId: text("employer_user_id").notNull().references(() => user.id), specialistUserId: text("specialist_user_id").notNull().references(() => user.id), companyId: uuid("company_id").notNull().references(() => companies.id), acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow() }, t => [uniqueIndex("match_pair_unique").on(t.employerUserId, t.specialistUserId)]);
+export const specialistFavorites = pgTable("specialist_favorites", {
+  specialistUserId: text("specialist_user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.specialistUserId, t.companyId] }), index("specialist_favorites_company_idx").on(t.companyId, t.createdAt)]);
+export const matchMessages = pgTable("match_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  matchId: uuid("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
+  senderUserId: text("sender_user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [index("match_messages_chat_idx").on(t.matchId, t.createdAt)]);
 
 export const practiceRecruitments = pgTable("practice_recruitments", {
   id: uuid("id").primaryKey().defaultRandom(), employerUserId: text("employer_user_id").notNull().references(() => user.id), companyId: uuid("company_id").notNull().references(() => companies.id),

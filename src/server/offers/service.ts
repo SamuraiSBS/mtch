@@ -25,7 +25,22 @@ export async function createOffer(employerUserId: string, input: unknown) {
   } catch (error) { if ((error as { code?: string }).code === "23505") fail(409, "OFFER_ALREADY_SENT", "Предложение уже отправлено"); throw error; }
 }
 export async function offerDetail(userId: string, id: string) { const [offer] = await db.select().from(offers).where(eq(offers.id, id)); if (!offer || (offer.employerUserId !== userId && offer.specialistUserId !== userId)) fail(404, "OFFER_NOT_FOUND", "Предложение не найдено"); return offer; }
-export async function listOffers(userId: string, side: "incoming" | "outgoing", url: string) { const { page, pageSize } = pageParams(url); const status = new URL(url).searchParams.get("status"); if (status && !z.enum(["SENT", "ACCEPTED", "REJECTED", "WITHDRAWN"]).safeParse(status).success) fail(422, "INVALID_STATUS", "Некорректный статус"); const rows = await db.select().from(offers).where(side === "incoming" ? eq(offers.specialistUserId, userId) : eq(offers.employerUserId, userId)).orderBy(desc(offers.sentAt)); return paged(status ? rows.filter(x => x.status === status) : rows, page, pageSize); }
+export async function listOffers(userId: string, side: "incoming" | "outgoing", url: string) {
+  const { page, pageSize } = pageParams(url);
+  const status = new URL(url).searchParams.get("status");
+  if (status && !z.enum(["SENT", "ACCEPTED", "REJECTED", "WITHDRAWN"]).safeParse(status).success) fail(422, "INVALID_STATUS", "Некорректный статус");
+  const rows = await db.select({
+    offer: offers,
+    companyLogoFileId: companies.logoFileId,
+    companyIndustry: companies.industry,
+    companyWebsiteUrl: companies.websiteUrl,
+  }).from(offers)
+    .innerJoin(companies, eq(companies.id, offers.companyId))
+    .where(side === "incoming" ? eq(offers.specialistUserId, userId) : eq(offers.employerUserId, userId))
+    .orderBy(desc(offers.sentAt));
+  const items = rows.map(({ offer, ...company }) => ({ ...offer, ...company }));
+  return paged(status ? items.filter(x => x.status === status) : items, page, pageSize);
+}
 export async function transitionOffer(userId: string, role: "SPECIALIST" | "EMPLOYER", id: string, action: "accept" | "reject" | "withdraw") {
   const offer = await offerDetail(userId, id);
   if (action === "withdraw" ? (role !== "EMPLOYER" || offer.employerUserId !== userId) : (role !== "SPECIALIST" || offer.specialistUserId !== userId)) fail(403, "FORBIDDEN", "Недостаточно прав");
