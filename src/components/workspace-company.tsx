@@ -460,20 +460,19 @@ function CompanyPanel({ userId, email, onSaved, onLogout }: Props) {
   const photoCount = form.photos.length;
 
   return <section className="profile-wizard company-wizard" aria-label="Анкета работодателя" aria-busy={saving}>
-    <div className="profile-wizard__topline">
-      <div className="profile-wizard__progress-block">
-        <div className="profile-wizard__counter" aria-live="polite">
-          <span>{String(step).padStart(2, "0")}</span><span aria-hidden="true"> / </span><span className="profile-wizard__total">{String(totalSteps).padStart(2, "0")}</span>
-        </div>
-        <div className="profile-wizard__progress" role="progressbar" aria-label="Прогресс анкеты компании" aria-valuemin={1} aria-valuemax={totalSteps} aria-valuenow={step}>
-          <span style={{ width: `${progressPercent}%` }} />
-        </div>
-      </div>
-      <div className="company-wizard__account"><span>{email}</span><button type="button" className="profile-wizard__logout" onClick={onLogout} disabled={isBusy}>Выйти</button></div>
-    </div>
-
     <div className="profile-wizard__body">
       <div className="profile-wizard__main">
+        <div className="profile-wizard__topline">
+          <div className="profile-wizard__progress-block">
+            <div className="profile-wizard__counter" aria-live="polite">
+              <span>{String(step).padStart(2, "0")}</span><span aria-hidden="true"> / </span><span className="profile-wizard__total">{String(totalSteps).padStart(2, "0")}</span>
+            </div>
+            <div className="profile-wizard__progress" role="progressbar" aria-label="Прогресс анкеты компании" aria-valuemin={1} aria-valuemax={totalSteps} aria-valuenow={step}>
+              <span style={{ width: `${progressPercent}%` }} />
+            </div>
+          </div>
+          <div className="company-wizard__account"><span>{email}</span><button type="button" className="profile-wizard__logout" onClick={onLogout} disabled={isBusy}>Выйти</button></div>
+        </div>
         <div className="profile-wizard__heading">
           <h1>{currentTitle}</h1>
           <p>{exists ? "Обновите профиль компании. Изменения появятся после завершения анкеты." : "Расскажите о компании — профиль появится в ленте после завершения анкеты."}</p>

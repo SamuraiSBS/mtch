@@ -654,20 +654,19 @@ export function SpecialistProfileWizard({
   const inAboutStep = step === (isPractice ? 5 : 4);
 
   return <section className="profile-wizard" aria-label="Анкета специалиста">
-    <div className="profile-wizard__topline">
-      <div className="profile-wizard__progress-block">
-        <div className="profile-wizard__counter" aria-live="polite">
-          <span>{String(step).padStart(2, "0")}</span><span aria-hidden="true"> / </span><span className="profile-wizard__total">{String(totalSteps).padStart(2, "0")}</span>
-        </div>
-        <div className="profile-wizard__progress" role="progressbar" aria-label="Прогресс анкеты" aria-valuemin={1} aria-valuemax={totalSteps} aria-valuenow={step}>
-          <span style={{ width: `${progressPercent}%` }} />
-        </div>
-      </div>
-      {onLogout && <button type="button" className="profile-wizard__logout" onClick={onLogout}>Выйти</button>}
-    </div>
-
     <div className="profile-wizard__body">
       <div className="profile-wizard__main">
+        <div className="profile-wizard__topline">
+          <div className="profile-wizard__progress-block">
+            <div className="profile-wizard__counter" aria-live="polite">
+              <span>{String(step).padStart(2, "0")}</span><span aria-hidden="true"> / </span><span className="profile-wizard__total">{String(totalSteps).padStart(2, "0")}</span>
+            </div>
+            <div className="profile-wizard__progress" role="progressbar" aria-label="Прогресс анкеты" aria-valuemin={1} aria-valuemax={totalSteps} aria-valuenow={step}>
+              <span style={{ width: `${progressPercent}%` }} />
+            </div>
+          </div>
+          {onLogout && <button type="button" className="profile-wizard__logout" onClick={onLogout}>Выйти</button>}
+        </div>
         <div className="profile-wizard__heading">
           <h1>{currentTitle}</h1>
           <p>Заполните профиль, чтобы работодатели могли предложить подходящую работу.</p>
