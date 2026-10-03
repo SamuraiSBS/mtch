@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowRight, Building2, BriefcaseBusiness, Check, Heart, MapPin, MessageCircle, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, Building2, BriefcaseBusiness, Check, Heart, MapPin, MessageCircle, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { api, send } from "./api";
 import { UiIcon } from "./ui-icon";
 import type { Catalogs } from "./workspace";
@@ -392,6 +392,7 @@ function SearchResults({ catalogs, favoritesOnly = false }: { catalogs: Catalogs
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [skillQuery, setSkillQuery] = useState("");
   const [layout, setLayout] = useState<"horizontal" | "vertical">("horizontal");
   const [items, setItems] = useState<Candidate[]>([]);
   const [page, setPage] = useState(1);
@@ -407,6 +408,24 @@ function SearchResults({ catalogs, favoritesOnly = false }: { catalogs: Catalogs
   const [canceling, setCanceling] = useState(false);
   const [cancelError, setCancelError] = useState("");
   const [practiceCandidate, setPracticeCandidate] = useState<Candidate | null>(null);
+
+  const activeFilterCount = Object.entries(filters).reduce((count, [key, value]) => count + (key === "skillIds" ? (value as string[]).length : value ? 1 : 0), 0);
+  const selectedSkills = catalogs.skills.filter(skill => filters.skillIds.includes(skill.id));
+  const visibleSkills = catalogs.skills
+    .filter(skill => skill.name.toLocaleLowerCase("ru-RU").includes(skillQuery.trim().toLocaleLowerCase("ru-RU")))
+    .slice(0, skillQuery.trim() ? 24 : 16);
+  const selectedFilterLabels = [
+    catalogs.professions.find(item => item.id === filters.professionId)?.name,
+    levelLabel(filters.level),
+    filters.minimumExperience ? `Опыт: ${experienceLabel(filters.minimumExperience)}` : "",
+    catalogs.cities.find(item => item.id === filters.cityId)?.name,
+    workLabel(filters.workFormat),
+    employmentLabel(filters.employmentType),
+    filters.ageMin || filters.ageMax ? `Возраст: ${filters.ageMin || "любой"}–${filters.ageMax || "любой"}` : "",
+    filters.salaryMinRub || filters.salaryMaxRub ? `Зарплата: ${filters.salaryMinRub ? money(Number(filters.salaryMinRub)) : "любая"}–${filters.salaryMaxRub ? money(Number(filters.salaryMaxRub)) : "любая"} ₽` : "",
+    ({ JOB: "Работа", INTERNSHIP: "Стажировка", PRACTICE: "Практика", OPEN_TO_OFFERS: "Открыт к предложениям" } as Record<string, string>)[filters.employmentGoal],
+    ...selectedSkills.map(skill => skill.name),
+  ].filter(Boolean) as string[];
 
   async function load(nextPage = 1, nextQuery = query, nextFilters = filters) {
     setLoading(true);
@@ -493,27 +512,46 @@ function SearchResults({ catalogs, favoritesOnly = false }: { catalogs: Catalogs
     {!favoritesOnly && <form className="employer-searchbar" onSubmit={event => { event.preventDefault(); void load(1); }}>
       <UiIcon icon={Search} size={22} />
       <input aria-label="Поиск исполнителя" value={query} onChange={event => setQuery(event.target.value)} placeholder="Например: Backend-разработчик, React, Москва" />
-      <button type="button" className={filterOpen ? "employer-searchbar__filter is-active" : "employer-searchbar__filter"} aria-label="Открыть фильтры" aria-expanded={filterOpen} onClick={() => setFilterOpen(open => !open)}><UiIcon icon={SlidersHorizontal} size={18} /></button>
+      <button type="button" className={filterOpen ? "employer-searchbar__filter is-active" : "employer-searchbar__filter"} aria-label={`Открыть фильтры${activeFilterCount ? `, выбрано: ${activeFilterCount}` : ""}`} aria-expanded={filterOpen} onClick={() => setFilterOpen(open => !open)}><UiIcon icon={SlidersHorizontal} size={18} />{activeFilterCount > 0 && <span className="employer-searchbar__filter-count">{activeFilterCount}</span>}</button>
       <button type="submit" className="employer-searchbar__submit" aria-label="Найти исполнителей"><ArrowRight size={23} /></button>
     </form>}
     {!favoritesOnly && filterOpen && <section className="employer-filter-panel" aria-label="Фильтры поиска">
-      <div className="employer-filter-panel__heading"><div><h2>Фильтры</h2><p>Сочетайте параметры для точного поиска</p></div><button type="button" className="employer-searchbar__filter" aria-label="Закрыть фильтры" onClick={() => setFilterOpen(false)}><UiIcon icon={X} size={18} /></button></div>
-      <div className="employer-filter-grid">
-        <label>Специализация<select value={filters.professionId} onChange={event => setFilters({ ...filters, professionId: event.target.value })}><option value="">Любая специализация</option>{catalogs.professions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label>Уровень<select value={filters.level} onChange={event => setFilters({ ...filters, level: event.target.value })}><option value="">Любой</option>{LEVEL.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Опыт<select value={filters.minimumExperience} onChange={event => setFilters({ ...filters, minimumExperience: event.target.value })}><option value="">Любой</option>{EXPERIENCE.map(([value, label]) => <option key={value} value={value}>От: {label}</option>)}</select></label>
-        <label>Город<select value={filters.cityId} onChange={event => setFilters({ ...filters, cityId: event.target.value })}><option value="">Любой город</option>{catalogs.cities.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label>Формат работы<select value={filters.workFormat} onChange={event => setFilters({ ...filters, workFormat: event.target.value })}><option value="">Любой формат</option>{WORK.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Занятость<select value={filters.employmentType} onChange={event => setFilters({ ...filters, employmentType: event.target.value })}><option value="">Любая</option>{EMPLOYMENT.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Возраст от<input type="number" min={1} max={120} value={filters.ageMin} onChange={event => setFilters({ ...filters, ageMin: event.target.value })} placeholder="18" /></label>
-        <label>Возраст до<input type="number" min={1} max={120} value={filters.ageMax} onChange={event => setFilters({ ...filters, ageMax: event.target.value })} placeholder="50" /></label>
-        <label>Зарплата от, ₽<input type="number" min={1} value={filters.salaryMinRub} onChange={event => setFilters({ ...filters, salaryMinRub: event.target.value })} placeholder="100 000" /></label>
-        <label>Зарплата до, ₽<input type="number" min={1} value={filters.salaryMaxRub} onChange={event => setFilters({ ...filters, salaryMaxRub: event.target.value })} placeholder="300 000" /></label>
-        <label>Цель поиска<select value={filters.employmentGoal} onChange={event => setFilters({ ...filters, employmentGoal: event.target.value })}><option value="">Работа и практика</option><option value="JOB">Работа</option><option value="INTERNSHIP">Стажировка</option><option value="PRACTICE">Практика</option><option value="OPEN_TO_OFFERS">Открыт к предложениям</option></select></label>
+      <div className="employer-filter-panel__heading"><div className="employer-filter-panel__title"><span><UiIcon icon={SlidersHorizontal} size={18} /></span><div><h2>Настройте поиск</h2><p>Выберите важные параметры — подходящие профили появятся в выдаче</p></div></div><button type="button" className="employer-searchbar__filter" aria-label="Закрыть фильтры" onClick={() => setFilterOpen(false)}><UiIcon icon={X} size={18} /></button></div>
+
+      <div className="employer-filter-section">
+        <div className="employer-filter-section__heading"><span><UiIcon icon={BriefcaseBusiness} size={17} /></span><div><h3>Профиль специалиста</h3><p>Роль, уровень и подходящий опыт</p></div></div>
+        <div className="employer-filter-grid">
+          <label>Специализация<select value={filters.professionId} onChange={event => setFilters({ ...filters, professionId: event.target.value })}><option value="">Любая специализация</option>{catalogs.professions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>Уровень<select value={filters.level} onChange={event => setFilters({ ...filters, level: event.target.value })}><option value="">Любой уровень</option>{LEVEL.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label>Опыт работы<select value={filters.minimumExperience} onChange={event => setFilters({ ...filters, minimumExperience: event.target.value })}><option value="">Любой опыт</option>{EXPERIENCE.map(([value, label]) => <option key={value} value={value}>От: {label}</option>)}</select></label>
+          <label>Цель поиска<select value={filters.employmentGoal} onChange={event => setFilters({ ...filters, employmentGoal: event.target.value })}><option value="">Работа и практика</option><option value="JOB">Работа</option><option value="INTERNSHIP">Стажировка</option><option value="PRACTICE">Практика</option><option value="OPEN_TO_OFFERS">Открыт к предложениям</option></select></label>
+        </div>
       </div>
-      <fieldset className="employer-filter-skills"><legend>Навыки</legend><div>{catalogs.skills.map(skill => <label key={skill.id}><input type="checkbox" checked={filters.skillIds.includes(skill.id)} onChange={event => setFilters(current => ({ ...current, skillIds: event.target.checked ? [...current.skillIds, skill.id] : current.skillIds.filter(id => id !== skill.id) }))} />{skill.name}</label>)}</div></fieldset>
-      <div className="employer-filter-panel__actions"><button type="button" className="specialist-secondary-button" onClick={() => setFilters(emptyFilters)}>Сбросить</button><button type="button" onClick={() => { setFilterOpen(false); void load(1); }}>Показать исполнителей <ArrowRight size={17} /></button></div>
+
+      <div className="employer-filter-section">
+        <div className="employer-filter-section__heading"><span><UiIcon icon={MapPin} size={17} /></span><div><h3>Город и условия</h3><p>Уточните локацию и ожидания кандидата</p></div></div>
+        <div className="employer-filter-grid">
+          <label>Город<select value={filters.cityId} onChange={event => setFilters({ ...filters, cityId: event.target.value })}><option value="">Любой город</option>{catalogs.cities.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>Формат работы<select value={filters.workFormat} onChange={event => setFilters({ ...filters, workFormat: event.target.value })}><option value="">Любой формат</option>{WORK.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label>Занятость<select value={filters.employmentType} onChange={event => setFilters({ ...filters, employmentType: event.target.value })}><option value="">Любая занятость</option>{EMPLOYMENT.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label>Возраст от<input type="number" min={1} max={120} value={filters.ageMin} onChange={event => setFilters({ ...filters, ageMin: event.target.value })} placeholder="Например, 18" /></label>
+          <label>Возраст до<input type="number" min={1} max={120} value={filters.ageMax} onChange={event => setFilters({ ...filters, ageMax: event.target.value })} placeholder="Например, 50" /></label>
+          <label>Зарплата от, ₽<input type="number" min={1} value={filters.salaryMinRub} onChange={event => setFilters({ ...filters, salaryMinRub: event.target.value })} placeholder="100 000" /></label>
+          <label>Зарплата до, ₽<input type="number" min={1} value={filters.salaryMaxRub} onChange={event => setFilters({ ...filters, salaryMaxRub: event.target.value })} placeholder="300 000" /></label>
+        </div>
+      </div>
+
+      <div className="employer-filter-section employer-filter-skills">
+        <div className="employer-filter-section__heading"><span><UiIcon icon={Check} size={17} /></span><div><h3>Навыки</h3><p>Подберите технологии и инструменты, которые важны для задачи</p></div><span className="employer-filter-skills__count">Выбрано {selectedSkills.length}</span></div>
+        <label className="employer-skill-search"><UiIcon icon={Search} size={17} /><input type="search" value={skillQuery} onChange={event => setSkillQuery(event.target.value)} placeholder="Найти навык: React, Figma, Photoshop…" aria-label="Найти навык" />{skillQuery && <button type="button" aria-label="Очистить поиск навыков" onClick={() => setSkillQuery("")}><UiIcon icon={X} size={15} /></button>}</label>
+        {selectedSkills.length > 0 && <div className="employer-filter-skills__selected"><span>Выбраны в поиске</span><div>{selectedSkills.map(skill => <button type="button" key={skill.id} onClick={() => setFilters(current => ({ ...current, skillIds: current.skillIds.filter(id => id !== skill.id) }))}>{skill.name}<UiIcon icon={X} size={13} /></button>)}</div></div>}
+        <div className="employer-filter-skills__options" aria-label="Список навыков">{visibleSkills.map(skill => { const selectedSkill = filters.skillIds.includes(skill.id); return <button type="button" key={skill.id} className={selectedSkill ? "employer-skill-option is-selected" : "employer-skill-option"} aria-pressed={selectedSkill} onClick={() => setFilters(current => ({ ...current, skillIds: selectedSkill ? current.skillIds.filter(id => id !== skill.id) : [...current.skillIds, skill.id] }))}><span>{selectedSkill ? <Check size={14} /> : <Plus size={14} />}</span>{skill.name}</button>; })}{visibleSkills.length === 0 && <p className="employer-filter-skills__empty">Навык не найден. Попробуйте другое название.</p>}</div>
+        {catalogs.skills.length > visibleSkills.length && !skillQuery.trim() && <p className="employer-filter-skills__hint">Показаны навыки из каталога. Введите название, чтобы найти остальные.</p>}
+      </div>
+
+      <div className="employer-filter-panel__actions"><button type="button" className="specialist-secondary-button" onClick={() => { setFilters(emptyFilters); setSkillQuery(""); void load(1, query, emptyFilters); }}>Сбросить всё</button><button type="button" onClick={() => { setFilterOpen(false); void load(1, query, filters); }}>Показать исполнителей <ArrowRight size={17} /></button></div>
     </section>}
+    {!favoritesOnly && !filterOpen && activeFilterCount > 0 && <div className="employer-active-filters"><span>{activeFilterCount} параметров поиска</span><div>{selectedFilterLabels.slice(0, 4).map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}{selectedFilterLabels.length > 4 && <span>+{selectedFilterLabels.length - 4}</span>}</div><button type="button" onClick={() => { setFilters(emptyFilters); setSkillQuery(""); void load(1, query, emptyFilters); }}>Сбросить <UiIcon icon={X} size={14} /></button></div>}
     {toast && <div className="employer-toast" role="status"><span><Check size={16} /></span>{toast}</div>}
     {error && <p className="specialist-dashboard__error" role="alert">{error}</p>}
     <div className="employer-results-toolbar"><strong>Найдено {total} {total === 1 ? "исполнитель" : "исполнителей"}</strong>{!favoritesOnly && <div><span>Вид:</span><button type="button" className={layout === "vertical" ? "is-active" : ""} onClick={() => setLayout("vertical")} aria-pressed={layout === "vertical"}>Вертикально</button><button type="button" className={layout === "horizontal" ? "is-active" : ""} onClick={() => setLayout("horizontal")} aria-pressed={layout === "horizontal"}>Горизонтально</button></div>}</div>

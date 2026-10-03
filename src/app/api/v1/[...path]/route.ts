@@ -76,7 +76,7 @@ async function dispatch(request: Request, context: Context) {
     if (parts.length === 1 && method === "GET") return Response.json(await listPracticeInvitations(user.id, user.role, request.url));
     if (parts.length === 2 && method === "GET") return Response.json(await practiceInvitationDetail(user.id, id(1)));
     if (parts.length === 3 && parts[2] === "contacts" && method === "GET") return Response.json(await practiceContacts(user.id, user.role, id(1)));
-    if (parts.length === 3 && method === "POST" && ["view", "accept", "decline", "interview", "hired"].includes(parts[2])) return Response.json(await transitionPracticeInvitation(user.id, user.role, id(1), parts[2] as "view" | "accept" | "decline" | "interview" | "hired"));
+    if (parts.length === 3 && method === "POST" && ["view", "accept", "decline", "interview", "hired", "cancel"].includes(parts[2])) return Response.json(await transitionPracticeInvitation(user.id, user.role, id(1), parts[2] as "view" | "accept" | "decline" | "interview" | "hired" | "cancel"));
   }
   if (parts[0] === "media") {
     if (parts.length === 1 && method === "POST") {

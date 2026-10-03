@@ -111,15 +111,20 @@ export async function listPracticeInvitations(userId: string, role: "SPECIALIST"
   return paged(await Promise.all(rows.map(x => practiceInvitationDetail(userId, x.id))), page, pageSize);
 }
 
-export async function transitionPracticeInvitation(userId: string, role: "SPECIALIST" | "EMPLOYER", id: string, action: "view" | "accept" | "decline" | "interview" | "hired") {
+export async function transitionPracticeInvitation(userId: string, role: "SPECIALIST" | "EMPLOYER", id: string, action: "view" | "accept" | "decline" | "interview" | "hired" | "cancel") {
   const invitation = await practiceInvitationDetail(userId, id);
   const studentAction = ["view", "accept", "decline"].includes(action);
   if (studentAction ? role !== "SPECIALIST" || invitation.candidateUserId !== userId : role !== "EMPLOYER" || invitation.employerUserId !== userId) fail(403, "FORBIDDEN", "Недостаточно прав");
   return db.transaction(async tx => {
     await tx.execute(sql`select id from practice_recruitments where id = ${invitation.practiceRecruitmentId} for update`);
     const [current] = await tx.select().from(practiceInvitations).where(eq(practiceInvitations.id, id));
-    const allowed = action === "view" ? current.status === "SENT" : action === "accept" || action === "decline" ? ["SENT", "VIEWED"].includes(current.status) : action === "interview" ? current.status === "ACCEPTED" : current.status === "INTERVIEW";
+    if (!current) fail(404, "PRACTICE_INVITATION_NOT_FOUND", "Приглашение уже отменено или не найдено");
+    const allowed = action === "view" ? current.status === "SENT" : action === "accept" || action === "decline" || action === "cancel" ? ["SENT", "VIEWED"].includes(current.status) : action === "interview" ? current.status === "ACCEPTED" : current.status === "INTERVIEW";
     if (!allowed) fail(409, "PRACTICE_INVALID_STATE", "Приглашение уже обработано");
+    if (action === "cancel") {
+      await tx.delete(practiceInvitations).where(eq(practiceInvitations.id, id));
+      return { id, status: "CANCELLED" as const };
+    }
     const status = { view: "VIEWED", accept: "ACCEPTED", decline: "DECLINED", interview: "INTERVIEW", hired: "HIRED" } as const;
     if (action === "hired") {
       const [recruitment] = await tx.select().from(practiceRecruitments).where(eq(practiceRecruitments.id, invitation.practiceRecruitmentId));
